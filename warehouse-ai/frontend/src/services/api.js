@@ -262,6 +262,16 @@ class ApiService {
   }
 
   /**
+   * Get single import receipt by ID
+   */
+  async getImportReceipt(receiptId) {
+    const response = await this.request(`/imports/${receiptId}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
    * Create import receipt
    */
   async createImportReceipt(receiptData) {

@@ -38,7 +38,7 @@ async def list_suppliers(
 async def create_supplier(
     supplier_data: SupplierCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """Create new supplier"""
     try:

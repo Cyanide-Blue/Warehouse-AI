@@ -39,7 +39,7 @@ async def list_import_receipts(
 async def create_import_receipt(
     receipt_data: ImportReceiptCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """Create new import receipt"""
     try:
@@ -79,7 +79,7 @@ async def get_import_receipt(
 async def confirm_import_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """Confirm import receipt and update stock"""
     try:
@@ -100,7 +100,7 @@ async def confirm_import_receipt(
 async def cancel_import_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """Cancel import receipt"""
     try:

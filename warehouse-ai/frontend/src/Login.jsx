@@ -97,6 +97,13 @@ function Login({ onLoginSuccess }) {
               </button>
               <button
                 type="button"
+                className={`demo-btn ${username === 'staff' ? 'active' : ''}`}
+                onClick={() => handleSelectDemoUser('staff', 'password123')}
+              >
+                👷 Nhân viên
+              </button>
+              <button
+                type="button"
                 className={`demo-btn ${username === 'storekeeper' ? 'active' : ''}`}
                 onClick={() => handleSelectDemoUser('storekeeper', 'password123')}
               >

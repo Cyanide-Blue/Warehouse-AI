@@ -148,22 +148,69 @@ function ExportsTab() {
                     </td>
                   </tr>
                 ) : (
-                  receipts.map((r) => (
-                    <tr key={r.id}>
-                      <td><strong>{r.receipt_code}</strong></td>
-                      <td>{formatDate(r.receipt_date)}</td>
-                      <td>{r.created_by?.full_name || 'N/A'}</td>
-                      <td>{r.notes || 'N/A'}</td>
-                      <td>
-                        <span className={`status ${r.status === 'COMPLETED' ? 'ok' : r.status === 'CANCELLED' ? 'danger' : 'warning'}`}>
-                          {r.status === 'COMPLETED' ? 'Đã hoàn thành' : r.status === 'CANCELLED' ? 'Đã huỷ' : 'Chờ xử lý'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button className="ghost-btn" style={{ fontSize: '0.8rem', padding: '4px 8px' }}>Chi tiết</button>
-                      </td>
-                    </tr>
-                  ))
+                  receipts.map((r) => {
+                    const isDraft = r.status === 'DRAFT';
+                    const isConfirmed = r.status === 'CONFIRMED';
+                    const isCancelled = r.status === 'CANCELLED';
+                    return (
+                      <tr key={r.id}>
+                        <td><strong style={{ color: '#38bdf8' }}>{r.receipt_code}</strong></td>
+                        <td>{formatDate(r.receipt_date)}</td>
+                        <td>{r.created_by_user?.full_name || r.created_by?.full_name || 'Quản trị / NV'}</td>
+                        <td>{r.notes || 'N/A'}</td>
+                        <td>
+                          <span className={`status ${isConfirmed ? 'ok' : isCancelled ? 'danger' : 'warning'}`}>
+                            {isConfirmed ? '✅ Đã xuất kho' : isCancelled ? '❌ Đã huỷ' : '⏳ Chờ xuất kho'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {isDraft && (
+                            <>
+                              <button 
+                                className="primary-btn" 
+                                style={{
+                                  fontSize: '0.8rem',
+                                  padding: '4px 8px',
+                                  marginRight: '6px',
+                                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                                  boxShadow: 'none'
+                                }}
+                                onClick={async () => {
+                                  if (window.confirm(`Xác nhận xuất kho cho phiếu "${r.receipt_code}"? Tồn kho sẽ giảm theo số lượng xuất.`)) {
+                                    try {
+                                      await api.confirmExportReceipt(r.id);
+                                      loadReceipts();
+                                    } catch (err) {
+                                      alert(err.message);
+                                    }
+                                  }
+                                }}
+                                title="Xác nhận xuất hàng & Trừ tồn kho"
+                              >
+                                ✅ Xuất kho
+                              </button>
+                              <button 
+                                className="ghost-btn" 
+                                style={{ fontSize: '0.8rem', padding: '4px 8px', color: '#fca5a5', marginRight: '6px' }}
+                                onClick={async () => {
+                                  if (window.confirm(`Huỷ phiếu xuất "${r.receipt_code}"?`)) {
+                                    try {
+                                      await api.cancelExportReceipt(r.id);
+                                      loadReceipts();
+                                    } catch (err) {
+                                      alert(err.message);
+                                    }
+                                  }
+                                }}
+                              >
+                                ✕ Huỷ
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

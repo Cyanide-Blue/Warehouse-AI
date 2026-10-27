@@ -97,7 +97,9 @@ def require_role(*allowed_roles: str) -> Callable:
         ForbiddenException: If user's role is not in allowed_roles
     """
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role.name not in allowed_roles:
+        user_role = (current_user.role.name if current_user.role else "").upper()
+        normalized_allowed = [r.upper() for r in allowed_roles]
+        if user_role not in normalized_allowed:
             raise ForbiddenException(
                 f"Access denied. Required role(s): {', '.join(allowed_roles)}"
             )

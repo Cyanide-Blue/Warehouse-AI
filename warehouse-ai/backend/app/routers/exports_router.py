@@ -39,7 +39,7 @@ async def list_export_receipts(
 async def create_export_receipt(
     receipt_data: ExportReceiptCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF", "BUYER"))
 ):
     """Create new export receipt"""
     try:
@@ -79,7 +79,7 @@ async def get_export_receipt(
 async def confirm_export_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """Confirm export receipt and update stock"""
     try:
@@ -100,7 +100,7 @@ async def confirm_export_receipt(
 async def cancel_export_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """Cancel export receipt"""
     try:

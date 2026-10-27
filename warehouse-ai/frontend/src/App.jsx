@@ -32,8 +32,8 @@ function App() {
       setUser(userData)
       
       // Default routing based on role
-      const roleName = userData?.role?.name || ''
-      if (roleName === 'STOREKEEPER') {
+      const roleName = (userData?.role?.name || '').toUpperCase()
+      if (roleName === 'STOREKEEPER' || roleName === 'STAFF') {
         setActiveTab('imports')
       } else if (roleName === 'ACCOUNTANT') {
         setActiveTab('reports')
@@ -89,24 +89,24 @@ function App() {
     )
   }
 
-  const roleName = user?.role?.name || 'ADMIN'
+  const roleName = (user?.role?.name || 'ADMIN').toUpperCase()
   
-  const canViewDashboard = roleName === 'ADMIN' || roleName === 'ACCOUNTANT' || roleName === 'STOREKEEPER'
+  const canViewDashboard = roleName === 'ADMIN' || roleName === 'ACCOUNTANT' || roleName === 'STOREKEEPER' || roleName === 'STAFF'
   const canViewProducts = true // Tất cả các vai trò đều có thể xem hàng hóa
-  const canViewImportsExports = roleName === 'ADMIN' || roleName === 'STOREKEEPER'
+  const canViewImportsExports = roleName === 'ADMIN' || roleName === 'STOREKEEPER' || roleName === 'STAFF'
   const canViewReports = roleName === 'ADMIN' || roleName === 'ACCOUNTANT'
   const canViewAI = roleName === 'ADMIN' || roleName === 'ACCOUNTANT'
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return canViewDashboard ? <DashboardTab /> : <ProductsTab userRole={roleName} />
+        return canViewDashboard ? <DashboardTab /> : <ProductsTab userRole={roleName} currentUser={user} onNavigateTab={setActiveTab} />
       case 'products':
-        return canViewProducts ? <ProductsTab userRole={roleName} /> : null
+        return canViewProducts ? <ProductsTab userRole={roleName} currentUser={user} onNavigateTab={setActiveTab} /> : null
       case 'imports':
-        return canViewImportsExports ? <ImportsTab /> : <DashboardTab />
+        return canViewImportsExports ? <ImportsTab userRole={roleName} currentUser={user} /> : <DashboardTab />
       case 'exports':
-        return canViewImportsExports ? <ExportsTab /> : <DashboardTab />
+        return canViewImportsExports ? <ExportsTab userRole={roleName} currentUser={user} /> : <DashboardTab />
       case 'reports':
         return canViewReports ? <ReportsTab /> : <DashboardTab />
       case 'ai':

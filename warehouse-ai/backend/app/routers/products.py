@@ -53,7 +53,7 @@ async def list_products(
 async def create_product(
     product_data: ProductCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """
     Create new product
@@ -110,7 +110,7 @@ async def update_product(
     product_id: int,
     product_data: ProductUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER"))
+    current_user: User = Depends(require_role("ADMIN", "STOREKEEPER", "STAFF"))
 ):
     """
     Update product

@@ -3,7 +3,7 @@ Import/Export service - handles import and export receipt operations
 """
 from sqlalchemy.orm import Session, joinedload
 from datetime import date
-from app.models import ImportReceipt, ImportReceiptItem, ExportReceipt, ExportReceiptItem, Product, User
+from app.models import ImportReceipt, ImportReceiptItem, ExportReceipt, ExportReceiptItem, Product, User, InventoryTransaction
 from app.schemas.import_receipt import ImportReceiptCreate, ImportReceiptItemCreate
 from app.schemas.export_receipt import ExportReceiptCreate, ExportReceiptItemCreate
 from app.exceptions import ResourceNotFoundException, InvalidOperationException
@@ -27,7 +27,12 @@ class ImportReceiptService:
     
     def list_import_receipts(self, skip: int = 0, limit: int = 100, status: str = None):
         """List import receipts with pagination"""
-        query = self.db.query(ImportReceipt).options(joinedload(ImportReceipt.supplier))
+        query = self.db.query(ImportReceipt).options(
+            joinedload(ImportReceipt.supplier),
+            joinedload(ImportReceipt.created_by_user),
+            joinedload(ImportReceipt.confirmed_by_user),
+            joinedload(ImportReceipt.items).joinedload(ImportReceiptItem.product)
+        ).order_by(ImportReceipt.created_at.desc())
         
         if status:
             query = query.filter(ImportReceipt.status == status)
@@ -37,7 +42,10 @@ class ImportReceiptService:
     def get_import_receipt_by_id(self, receipt_id: int) -> ImportReceipt:
         """Get import receipt by ID"""
         receipt = self.db.query(ImportReceipt).options(
-            joinedload(ImportReceipt.supplier)
+            joinedload(ImportReceipt.supplier),
+            joinedload(ImportReceipt.created_by_user),
+            joinedload(ImportReceipt.confirmed_by_user),
+            joinedload(ImportReceipt.items).joinedload(ImportReceiptItem.product)
         ).filter(ImportReceipt.id == receipt_id).first()
         
         if not receipt:
@@ -89,6 +97,9 @@ class ImportReceiptService:
         self.db.commit()
         self.db.refresh(receipt)
         
+        if getattr(receipt_data, "auto_confirm", False):
+            receipt = self.confirm_import_receipt(receipt.id, confirmed_by_id=created_by_id)
+        
         logger.info(f"Import receipt created: {receipt.receipt_code}")
         return receipt
     
@@ -99,10 +110,24 @@ class ImportReceiptService:
         if receipt.status != "DRAFT":
             raise InvalidOperationException(f"Cannot confirm receipt with status {receipt.status}")
         
-        # Update product stocks
+        # Update product stocks and record inventory transactions
         for item in receipt.items:
             product = item.product
+            old_stock = product.current_stock
             product.current_stock += item.quantity
+            
+            trans = InventoryTransaction(
+                product_id=product.id,
+                transaction_type="IMPORT",
+                quantity=item.quantity,
+                old_stock=old_stock,
+                new_stock=product.current_stock,
+                reference_type="IMPORT_RECEIPT",
+                reference_id=receipt.id,
+                created_by=confirmed_by_id,
+                notes=f"Nhập kho theo phiếu {receipt.receipt_code}"
+            )
+            self.db.add(trans)
         
         receipt.status = "CONFIRMED"
         receipt.confirmed_by = confirmed_by_id
