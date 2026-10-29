@@ -12,6 +12,8 @@ class SupplierBase(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, max_length=20)
     address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
     contact_person: Optional[str] = None
     notes: Optional[str] = None
 
@@ -25,6 +27,8 @@ class SupplierUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
     contact_person: Optional[str] = None
     notes: Optional[str] = None
 
