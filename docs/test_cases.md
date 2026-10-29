@@ -226,3 +226,4 @@ cd warehouse-ai/backend
 python tests_system_suite.py
 ```
 Thời gian thực thi trọn vẹn 32 Test Cases: **~2.1 giây (Tỷ lệ Đạt 100% PASS)**.
+
