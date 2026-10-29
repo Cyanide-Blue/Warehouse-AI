@@ -4,7 +4,9 @@ Main FastAPI application entry point.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from pathlib import Path
 import logging
 
 from .config import APP_NAME, APP_VERSION, APP_DESCRIPTION, ALLOWED_ORIGINS
@@ -210,7 +212,7 @@ async def health_check():
     }
 
 
-@app.get("/", tags=["Health"])
+@app.get("/api/info", tags=["Health"])
 async def root():
     """
     Root endpoint.
@@ -243,3 +245,9 @@ logger.info(f"{'='*60}")
 logger.info("📌 API Documentation: http://localhost:8000/docs")
 logger.info("📌 Health Check: http://localhost:8000/health")
 logger.info(f"{'='*60}\n")
+
+
+# ==================== STATIC FRONTEND SERVING ====================
+dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if dist_dir.exists():
+    app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="frontend")

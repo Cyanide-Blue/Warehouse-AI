@@ -1,26 +1,27 @@
 @echo off
-chcp 65001 >nul
 echo ========================================================
-echo     WAREHOUSE AI - KHOI CHAY HE THONG
+echo     WAREHOUSE AI - KHOI DONG HE THONG
 echo ========================================================
+
+set "PYTHON_EXE=C:\Users\ADMIN\AppData\Local\Programs\Python\Python38\python.exe"
 set "NODE_DIR=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VisualStudio\NodeJs"
 set "PATH=%NODE_DIR%;%PATH%"
 
-echo 1. Khoi dong Backend (FastAPI - Port 8000)...
-start "Warehouse AI - Backend" cmd /k "cd /d "%~dp0warehouse-ai\backend" && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+set "ROOT=C:\Users\ADMIN\OneDrive\Desktop\Ung_dung_ai\Warehouse-AI"
 
-timeout /t 2 /nobreak >nul
+echo [1/2] Dang khoi dong Backend API (Port 8000)...
+start "Warehouse-AI-Backend" cmd /k "cd /d "%ROOT%\warehouse-ai\backend" && "%PYTHON_EXE%" -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
 
-echo 2. Khoi dong Frontend (React + Vite - Port 5173)...
-start "Warehouse AI - Frontend" cmd /k "cd /d "%~dp0warehouse-ai\frontend" && npm run dev -- --host 127.0.0.1 --port 5173"
+ping 127.0.0.1 -n 3 >nul
 
-echo.
+echo [2/2] Dang khoi dong Frontend Web (Port 5173)...
+start "Warehouse-AI-Frontend" cmd /k "cd /d "%ROOT%\warehouse-ai\frontend" && npm run dev -- --host 127.0.0.1 --port 5173"
+
+ping 127.0.0.1 -n 3 >nul
+
 echo ========================================================
-echo  He thong da khoi dong thanh cong!
+echo  Khoi dong thanh cong!
 echo  - Frontend Web: http://localhost:5173
 echo  - Backend API:  http://localhost:8000
-echo  - API Docs:     http://localhost:8000/docs
 echo ========================================================
-timeout /t 3 /nobreak >nul
 start http://localhost:5173
-
