@@ -6,7 +6,6 @@ import api from '../services/api';
 function renderFormattedText(text) {
   if (!text) return null;
 
-  // Tách dòng
   const lines = text.split('\n');
   const elements = [];
   let inList = false;
@@ -29,52 +28,47 @@ function renderFormattedText(text) {
   lines.forEach((line, lineIdx) => {
     const trimmed = line.trim();
 
-    // Dòng trống
     if (!trimmed) {
       flushList();
-      elements.push(<div key={`spacer-${lineIdx}`} className="ai-spacer" />);
+      elements.push(<div key={`spacer-${lineIdx}`} style={{ height: '6px' }} />);
       return;
     }
 
-    // Tiêu đề Markdown ###, ##, #
     if (trimmed.startsWith('### ')) {
       flushList();
-      elements.push(<h4 key={`h4-${lineIdx}`} className="ai-md-h4">{parseInlineFormatting(trimmed.substring(4))}</h4>);
+      elements.push(<h4 key={`h4-${lineIdx}`} style={{ fontSize: '13px', fontWeight: 600, margin: '8px 0 4px' }}>{parseInlineFormatting(trimmed.substring(4))}</h4>);
       return;
     }
     if (trimmed.startsWith('## ')) {
       flushList();
-      elements.push(<h3 key={`h3-${lineIdx}`} className="ai-md-h3">{parseInlineFormatting(trimmed.substring(3))}</h3>);
+      elements.push(<h3 key={`h3-${lineIdx}`} style={{ fontSize: '14px', fontWeight: 600, margin: '10px 0 4px' }}>{parseInlineFormatting(trimmed.substring(3))}</h3>);
       return;
     }
     if (trimmed.startsWith('# ')) {
       flushList();
-      elements.push(<h2 key={`h2-${lineIdx}`} className="ai-md-h2">{parseInlineFormatting(trimmed.substring(2))}</h2>);
+      elements.push(<h2 key={`h2-${lineIdx}`} style={{ fontSize: '15px', fontWeight: 600, margin: '12px 0 6px' }}>{parseInlineFormatting(trimmed.substring(2))}</h2>);
       return;
     }
 
-    // Gạch đầu dòng (- hoặc *)
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       inList = true;
       listItems.push(trimmed.substring(2));
       return;
     }
 
-    // Đánh số thứ tự (1. 2. 3.)
     if (/^\d+\.\s/.test(trimmed)) {
       flushList();
       elements.push(
-        <div key={`num-${lineIdx}`} className="ai-numbered-item">
+        <div key={`num-${lineIdx}`} style={{ margin: '4px 0' }}>
           {parseInlineFormatting(trimmed)}
         </div>
       );
       return;
     }
 
-    // Dòng bình thường
     flushList();
     elements.push(
-      <p key={`p-${lineIdx}`} className="ai-paragraph">
+      <p key={`p-${lineIdx}`} style={{ margin: '4px 0' }}>
         {parseInlineFormatting(trimmed)}
       </p>
     );
@@ -84,20 +78,15 @@ function renderFormattedText(text) {
   return elements;
 }
 
-// Xử lý in đậm **bold** và code `code`
 function parseInlineFormatting(str) {
   if (!str) return '';
-  // Tách theo **...** hoặc `...`
   const parts = [];
   let remaining = str;
-
-  // Regex bắt **bold** và `code`
   const pattern = /(\*\*[^*]+\*\*|`[^`]+`)/g;
   let match;
   let lastIndex = 0;
 
   while ((match = pattern.exec(str)) !== null) {
-    // Phần trước match
     if (match.index > lastIndex) {
       parts.push(str.substring(lastIndex, match.index));
     }
@@ -121,12 +110,12 @@ function parseInlineFormatting(str) {
 function AITab() {
   const [activeMode, setActiveMode] = useState('buyer'); // 'buyer' | 'analytics'
   
-  // State Buyer Copilot
+  // State Buyer Copilot (Lời chào rút gọn tối đa 3 gạch đầu dòng, không emoji)
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
       role: 'model',
-      text: `👋 **Xin chào! Tôi là Gemini Buyer Copilot** – Trợ lý AI Chuyên Gia Tư Vấn & Mua Sắm Thông Minh.\n\nTôi được trang bị **khả năng đọc trực tiếp bất kỳ trang web nào** để giúp bạn:\n- 🌐 **Đọc & bóc tách cấu hình, giá bán** từ link sản phẩm (Shopee, Tiki, FPT, CellphoneS, TGDĐ, Amazon...)\n- ⚖️ **Đánh giá ưu & nhược điểm khách quan**, cảnh báo rủi ro hoặc giá ảo\n- 💡 **Tư vấn cấu hình tối ưu** theo đúng nhu cầu & túi tiền của bạn\n- 📦 **Đối chiếu với hàng hóa trong kho** nếu bạn muốn mua/nhập ngay\n\n*Hãy dán đường link sản phẩm bên dưới hoặc đặt câu hỏi để tôi bắt đầu hỗ trợ bạn!*`,
+      text: `Xin chào, tôi là Gemini Buyer Copilot. Tôi hỗ trợ bạn các tác vụ sau:\n- Đọc và bóc tách thông tin cấu hình, giá bán từ liên kết sản phẩm\n- Phân tích ưu nhược điểm kỹ thuật và đề xuất lựa chọn phù hợp\n- Đối chiếu tình trạng hàng hóa với dữ liệu tồn kho thực tế\n\nBạn có thể dán đường link sản phẩm vào ô bên trên hoặc nhập câu hỏi bên dưới để bắt đầu.`,
       webInfo: null,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -179,8 +168,7 @@ function AITab() {
     try {
       setApplyingRecId(rec.product_id);
       const res = await api.applyAIRecommendation(rec.product_id, rec.suggested_quantity, rec.supplier_id || 1);
-      setActionSuccessMsg(res.message || `Đã tạo lệnh nhập kho thành công cho ${rec.product_name}!`);
-      // Tải lại phân tích
+      setActionSuccessMsg(res.message || `Đã tạo lệnh nhập kho thành công cho ${rec.product_name}.`);
       await loadAnalytics();
       setTimeout(() => setActionSuccessMsg(null), 5000);
     } catch (err) {
@@ -190,13 +178,12 @@ function AITab() {
     }
   };
 
-  // Quét thử URL trực tiếp
   const handleScanWebUrl = async () => {
     const url = inputUrl.trim();
     if (!url) return;
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      alert('Vui lòng nhập đường link đầy đủ có https:// hoặc http://');
+      alert('Vui lòng nhập đường link đầy đủ có http:// hoặc https://');
       return;
     }
 
@@ -207,13 +194,12 @@ function AITab() {
       setAttachedUrl(url);
       setInputUrl('');
     } catch (err) {
-      alert(`Không thể đọc link: ${err.message}`);
+      alert(`Không thể đọc liên kết: ${err.message}`);
     } finally {
       setIsScanningUrl(false);
     }
   };
 
-  // Gửi tin nhắn chat
   const handleSendMessage = async (textToSend = null) => {
     const message = (textToSend || inputText).trim();
     const urlToUse = attachedUrl || null;
@@ -224,7 +210,7 @@ function AITab() {
     const newMsg = {
       id: userMsgId,
       role: 'user',
-      text: message || (urlToUse ? `Hãy phân tích trang web này: ${urlToUse}` : ''),
+      text: message || (urlToUse ? `Phân tích trang web này: ${urlToUse}` : ''),
       attachedUrl: urlToUse,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
@@ -236,13 +222,12 @@ function AITab() {
     setIsLoading(true);
 
     if (urlToUse) {
-      setLoadingStep('Đang truy cập và bóc tách nội dung website...');
+      setLoadingStep('Đang truy cập và trích xuất dữ liệu website...');
     } else {
-      setLoadingStep('Gemini đang suy nghĩ câu trả lời tối ưu...');
+      setLoadingStep('Đang xử lý câu hỏi...');
     }
 
     try {
-      // Chuẩn bị history
       const history = messages
         .filter((m) => m.id !== 'welcome')
         .slice(-6)
@@ -259,7 +244,7 @@ function AITab() {
         {
           id: aiMsgId,
           role: 'model',
-          text: res.reply || 'Không có phản hồi từ AI.',
+          text: res.reply || 'Không có phản hồi từ máy chủ.',
           webInfo: res.web_info,
           modelUsed: res.model_used,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -271,7 +256,7 @@ function AITab() {
         {
           id: 'err-' + Date.now(),
           role: 'model',
-          text: `⚠️ **Lỗi kết nối:** ${err.message || 'Không thể liên lạc với máy chủ AI.'}\n\n*Vui lòng kiểm tra kết nối mạng và thử lại!*`,
+          text: `Lỗi kết nối: ${err.message || 'Không thể liên lạc với máy chủ AI.'}\n\nVui lòng thử lại sau.`,
           webInfo: null,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
@@ -296,12 +281,12 @@ function AITab() {
   };
 
   const handleClearChat = () => {
-    if (window.confirm('Bạn có chắc muốn xóa lịch sử trò chuyện này?')) {
+    if (window.confirm('Xác nhận làm mới đoạn hội thoại?')) {
       setMessages([
         {
           id: 'welcome-reset',
           role: 'model',
-          text: `🔄 **Đã làm mới cuộc hội thoại.** Bạn muốn tôi đọc link sản phẩm nào hay tư vấn điều gì cho bạn tiếp theo?`,
+          text: `Đã làm mới cuộc hội thoại. Bạn có thể dán đường link hoặc đặt câu hỏi để tiếp tục.`,
           webInfo: null,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
@@ -312,72 +297,70 @@ function AITab() {
   };
 
   const quickPrompts = [
-    { label: '💻 Laptop sinh viên < 18 triệu', text: 'Tư vấn giúp tôi chiếc laptop tốt nhất cho sinh viên với ngân sách dưới 18 triệu, ưu tiên pin trâu và bền bỉ.' },
-    { label: '📱 So sánh iPhone 15 vs S24', text: 'So sánh chi tiết iPhone 15 và Galaxy S24: cấu hình, camera, pin và màn hình. Nhu cầu dùng 3-4 năm thì nên chọn máy nào?' },
-    { label: '🔍 Đọc & đánh giá link web', action: () => chatInputRef.current?.focus() },
-    { label: '📦 Kiểm tra hàng tồn trong kho', text: 'Hiện tại trong kho đang có những sản phẩm công nghệ nào sẵn hàng và số lượng tồn bao nhiêu?' },
+    { label: 'Laptop sinh viên dưới 18 triệu', text: 'Tư vấn chiếc laptop phù hợp cho sinh viên với ngân sách dưới 18 triệu, ưu tiên độ bền và thời lượng pin.' },
+    { label: 'So sánh iPhone 15 và Galaxy S24', text: 'So sánh chi tiết iPhone 15 và Galaxy S24 về cấu hình, pin, màn hình và độ ổn định lâu dài.' },
+    { label: 'Kiểm tra hàng tồn kho', text: 'Hiện tại trong kho đang có những sản phẩm công nghệ nào sẵn hàng và số lượng tồn bao nhiêu?' },
   ];
 
   return (
     <div className="ai-page-wrapper">
-      {/* Top Header */}
+      {/* Header bar */}
       <header className="ai-header-bar">
         <div className="ai-header-title">
-          <div className="ai-badge-row">
-            <span className="ai-pill live-pill">
-              <span className="live-dot"></span> Gemini AI Active
-            </span>
-            <span className="ai-pill web-pill">🌐 Web Reader Ready</span>
-            <span className="ai-pill model-pill">⚡ Multi-Model Flash</span>
-          </div>
-          <h1>Trí Tuệ Nhân Tạo & Trợ Lý Mua Hàng</h1>
-          <p className="ai-subtitle">
-            Hệ thống AI đa năng: Đọc trực tiếp website, bóc tách cấu hình & giá bán, bảo vệ quyền lợi người mua và quản trị kho thông minh.
+          <p className="eyebrow">Trí tuệ nhân tạo</p>
+          <h1>AI Insights & Trợ lý mua hàng</h1>
+          <p className="topbar-desc">
+            Phân tích tự động cấu hình từ website, đánh giá giá bán và dự báo định mức tồn kho thông minh.
           </p>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="ai-mode-tabs">
+        {/* Mode Switcher */}
+        <div className="ai-mode-tabs" role="tablist">
           <button
+            role="tab"
+            aria-selected={activeMode === 'buyer'}
             className={`ai-mode-btn ${activeMode === 'buyer' ? 'active' : ''}`}
             onClick={() => setActiveMode('buyer')}
           >
-            <span className="icon">🛒</span>
-            <div>
-              <strong>Trợ Lý Mua Hàng & Đọc Web</strong>
-              <small>Buyer Copilot & Web Reader</small>
-            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span>Trợ lý mua hàng & Đọc web</span>
           </button>
           <button
+            role="tab"
+            aria-selected={activeMode === 'analytics'}
             className={`ai-mode-btn ${activeMode === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveMode('analytics')}
           >
-            <span className="icon">📊</span>
-            <div>
-              <strong>Phân Tích & Sức Khỏe Kho</strong>
-              <small>Health Score & Recommendations</small>
-            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M3 3v18h18"/>
+              <path d="M18 17V9"/>
+              <path d="M13 17V5"/>
+              <path d="M8 17v-3"/>
+            </svg>
+            <span>Sức khỏe kho hàng</span>
           </button>
         </div>
       </header>
 
-      {/* ===================== MODE 1: BUYER COPILOT & WEB READER ===================== */}
+      {/* MODE 1: BUYER COPILOT & WEB READER */}
       {activeMode === 'buyer' && (
-        <section className="buyer-copilot-container">
-          {/* Web Inspector Bar */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Bộ đọc website: URL input + Nút Quét link trên cùng 1 hàng */}
           <div className="web-inspector-bar">
-            <div className="web-inspector-label">
-              <span className="radar-icon">🌐</span>
-              <div>
-                <strong>Bộ Đọc & Bóc Tách Website (Web Inspector)</strong>
-                <small>Dán bất kỳ URL sản phẩm (Shopee, Tiki, FPT, TGDĐ, CellphoneS, Amazon...) để AI quét nội dung</small>
+            <div className="web-inspector-header">
+              <div className="web-inspector-label">
+                <strong>Bộ đọc liên kết website</strong>
+                <small>Nhập link sản phẩm (Tiki, Shopee, FPT Shop, CellphoneS...) để AI bóc tách thông số kỹ thuật</small>
               </div>
             </div>
 
             <div className="web-inspector-input-row">
               <input
                 type="url"
-                placeholder="https://tiki.vn/... hoặc https://fptshop.com.vn/... hoặc bất kỳ link web nào"
+                placeholder="https://tiki.vn/... hoặc đường dẫn sản phẩm cần đọc"
                 value={inputUrl}
                 onChange={(e) => setInputUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -387,28 +370,19 @@ function AITab() {
                   }
                 }}
                 className="web-inspector-input"
+                aria-label="Đường dẫn trang web"
               />
               <button
                 className="web-inspector-btn"
                 onClick={handleScanWebUrl}
                 disabled={isScanningUrl || !inputUrl.trim()}
               >
-                {isScanningUrl ? (
-                  <>
-                    <span className="btn-spinner"></span> Đang quét...
-                  </>
-                ) : (
-                  <>
-                    <span>🔍</span> Quét & Nạp Link
-                  </>
-                )}
+                {isScanningUrl ? 'Đang quét...' : 'Quét link'}
               </button>
             </div>
 
-            {/* Attached URL Badge */}
             {attachedUrl && (
               <div className="attached-url-chip">
-                <span className="chip-icon">🔗</span>
                 <span className="chip-text">
                   <strong>Đã đính kèm:</strong> {webPreview?.title || attachedUrl}
                 </span>
@@ -418,7 +392,7 @@ function AITab() {
                     setAttachedUrl(null);
                     setWebPreview(null);
                   }}
-                  title="Gỡ link này"
+                  aria-label="Gỡ link này"
                 >
                   ✕
                 </button>
@@ -430,16 +404,12 @@ function AITab() {
           <div className="ai-chat-window">
             <div className="ai-chat-top-actions">
               <div className="ai-chat-meta">
-                <span className="chat-bot-avatar">🤖</span>
-                <div>
-                  <strong>Gemini Buyer Copilot</strong>
-                  <span className="chat-status">
-                    <span className="online-point"></span> Sẵn sàng phản hồi
-                  </span>
-                </div>
+                <span className="chat-status-dot"></span>
+                <strong>Gemini Buyer Copilot</strong>
+                <small>• Trực tuyến</small>
               </div>
-              <button className="clear-chat-btn" onClick={handleClearChat} title="Làm mới đoạn hội thoại">
-                🗑️ Làm mới chat
+              <button className="text-btn" onClick={handleClearChat}>
+                Làm mới đoạn chat
               </button>
             </div>
 
@@ -447,24 +417,18 @@ function AITab() {
             <div className="ai-messages-list">
               {messages.map((msg) => (
                 <div key={msg.id} className={`ai-message-row ${msg.role === 'user' ? 'user-row' : 'model-row'}`}>
-                  <div className="message-avatar">
-                    {msg.role === 'user' ? '👤' : '🤖'}
-                  </div>
-
                   <div className="message-bubble">
                     <div className="message-header">
                       <span className="sender-name">
-                        {msg.role === 'user' ? 'Bạn (Người mua)' : 'Gemini Buyer Copilot'}
+                        {msg.role === 'user' ? 'Bạn' : 'Gemini Copilot'}
                       </span>
                       <span className="message-time">{msg.timestamp}</span>
                     </div>
 
-                    {/* Web Link Preview nếu AI đọc được web */}
                     {msg.webInfo && msg.webInfo.success && (
                       <div className="web-source-card">
                         <div className="web-source-badge">
-                          <span>🌐 Dữ liệu trích xuất từ website:</span>
-                          <strong>{msg.webInfo.domain}</strong>
+                          Nguồn: <strong>{msg.webInfo.domain}</strong>
                         </div>
                         <h4 className="web-source-title">{msg.webInfo.title}</h4>
                         {msg.webInfo.description && (
@@ -476,38 +440,34 @@ function AITab() {
                           rel="noreferrer"
                           className="web-source-link"
                         >
-                          Mở trang gốc ↗
+                          Mở trang gốc
                         </a>
                       </div>
                     )}
 
-                    {/* URL đính kèm của User */}
                     {msg.attachedUrl && (
                       <div className="user-attached-card">
-                        <span>🔗 Link kiểm tra:</span>
+                        <span>Liên kết: </span>
                         <a href={msg.attachedUrl} target="_blank" rel="noreferrer">
                           {msg.attachedUrl}
                         </a>
                       </div>
                     )}
 
-                    {/* Nội dung tin nhắn */}
                     <div className="message-body">
                       {renderFormattedText(msg.text)}
                     </div>
 
-                    {/* Message Footer */}
                     {msg.role === 'model' && (
                       <div className="message-footer">
-                        {msg.modelUsed && (
-                          <span className="model-tag">⚡ Engine: {msg.modelUsed}</span>
-                        )}
+                        <span className="model-tag">
+                          {msg.modelUsed ? `Mô hình: ${msg.modelUsed}` : ''}
+                        </span>
                         <button
                           className="copy-btn"
                           onClick={() => copyToClipboard(msg.text, msg.id)}
-                          title="Sao chép nội dung"
                         >
-                          {copiedId === msg.id ? '✓ Đã chép' : '📋 Sao chép'}
+                          {copiedId === msg.id ? 'Đã sao chép' : 'Sao chép'}
                         </button>
                       </div>
                     )}
@@ -515,17 +475,11 @@ function AITab() {
                 </div>
               ))}
 
-              {/* Loading State */}
               {isLoading && (
-                <div className="ai-message-row model-row loading-row">
-                  <div className="message-avatar pulse-avatar">🤖</div>
+                <div className="ai-message-row model-row">
                   <div className="message-bubble loading-bubble">
-                    <div className="ai-thinking-wave">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                    <span className="thinking-text">{loadingStep || 'Gemini đang phân tích và soạn câu trả lời...'}</span>
+                    <div className="thinking-spinner"></div>
+                    <span>{loadingStep || 'Đang chuẩn bị phản hồi...'}</span>
                   </div>
                 </div>
               )}
@@ -533,20 +487,14 @@ function AITab() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Suggestions Chips */}
+            {/* Quick Suggestions (Dạng liên kết chữ) */}
             <div className="ai-quick-chips">
-              <span className="chips-title">💡 Gợi ý nhanh:</span>
+              <span className="chips-title">Gợi ý nhanh:</span>
               {quickPrompts.map((p, idx) => (
                 <button
                   key={idx}
-                  className="quick-chip-btn"
-                  onClick={() => {
-                    if (p.action) {
-                      p.action();
-                    } else {
-                      handleSendMessage(p.text);
-                    }
-                  }}
+                  className="quick-chip-link"
+                  onClick={() => handleSendMessage(p.text)}
                   disabled={isLoading}
                 >
                   {p.label}
@@ -554,16 +502,16 @@ function AITab() {
               ))}
             </div>
 
-            {/* Input Form */}
+            {/* Input Bar */}
             <div className="ai-chat-input-bar">
               <textarea
                 ref={chatInputRef}
                 className="ai-chat-textarea"
-                placeholder="Nhập câu hỏi cần tư vấn, hoặc dán link sản phẩm trực tiếp vào đây..."
+                placeholder="Nhập câu hỏi hoặc yêu cầu tư vấn..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={2}
+                rows={1}
                 disabled={isLoading}
               />
               <button
@@ -571,198 +519,157 @@ function AITab() {
                 onClick={() => handleSendMessage()}
                 disabled={isLoading || (!inputText.trim() && !attachedUrl)}
               >
-                {isLoading ? (
-                  <span className="send-spinner"></span>
-                ) : (
-                  <>
-                    <span>Gửi</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </>
-                )}
+                {isLoading ? 'Đang gửi...' : 'Gửi'}
               </button>
             </div>
           </div>
         </section>
       )}
 
-      {/* ===================== MODE 2: WAREHOUSE ANALYTICS & HEALTH ===================== */}
+      {/* MODE 2: WAREHOUSE ANALYTICS */}
       {activeMode === 'analytics' && (
-        <section className="warehouse-analytics-container">
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {actionSuccessMsg && (
-            <div className="alert-banner success-alert">
-              <span>✓</span> {actionSuccessMsg}
+            <div className="alert-banner success" role="status">
+              <span>{actionSuccessMsg}</span>
             </div>
           )}
 
           {isLoadingAnalytics && (
-            <div className="analytics-loading-box">
-              <div className="ai-brain-animation">
-                <div className="core"></div>
-                <div className="ring ring-1"></div>
-                <div className="ring ring-2"></div>
-              </div>
-              <p>Hệ thống AI đang phân tích dữ liệu tồn kho, luân chuyển và dự toán nhu cầu...</p>
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-muted)' }}>
+              Đang phân tích sức khỏe kho hàng và tính toán định mức bổ sung...
             </div>
           )}
 
           {analyticsError && (
-            <div className="alert-banner error-alert">
-              <span>⚠️</span> {analyticsError}
-              <button onClick={loadAnalytics} className="retry-btn">Thử lại</button>
+            <div className="alert-banner error" role="alert">
+              <span>{analyticsError}</span>
+              <button onClick={loadAnalytics} className="ghost-btn" style={{ marginLeft: 'auto', padding: '4px 8px', minHeight: 'auto' }}>
+                Thử lại
+              </button>
             </div>
           )}
 
           {analyticsData && !isLoadingAnalytics && (
             <>
-              {/* Health Score Overview Grid */}
+              {/* Health Score Overview */}
               <div className="health-score-grid">
-                <div className="health-card panel">
-                  <div className="score-circle-wrapper">
-                    <div
-                      className="score-circle"
-                      style={{
-                        background: `conic-gradient(${analyticsData.health_color || '#10b981'} ${analyticsData.health_score * 3.6}deg, rgba(255,255,255,0.08) 0deg)`
-                      }}
-                    >
-                      <div className="score-circle-inner">
-                        <strong className="score-number">{analyticsData.health_score}</strong>
-                        <small>/ 100</small>
-                      </div>
-                    </div>
+                <div className="health-card">
+                  <div className="health-number-box">
+                    <span className="health-score-num">{analyticsData.health_score}</span>
+                    <span className="health-score-max"> / 100</span>
                   </div>
                   <div className="health-info">
-                    <span className="health-status-badge" style={{ color: analyticsData.health_color }}>
-                      ● {analyticsData.health_status}
+                    <span className="status ok" style={{ marginBottom: '6px' }}>
+                      {analyticsData.health_status}
                     </span>
-                    <h3>Chỉ Số Sức Khỏe Kho Hàng</h3>
-                    <p>Được AI đánh giá dựa trên tỷ lệ thiếu hụt tồn kho, tốc độ luân chuyển và rủi ro đứt gãy cung ứng.</p>
+                    <h3>Chỉ số sức khỏe kho</h3>
+                    <p>Đánh giá dựa trên tỷ lệ thiếu hụt tồn kho, tốc độ luân chuyển và rủi ro gián đoạn cung ứng.</p>
                   </div>
                 </div>
 
-                <div className="metrics-summary-card panel">
-                  <h3>Thống Kê Kho Nhanh</h3>
+                <div className="panel">
+                  <div className="panel-header">
+                    <div className="panel-title-group">
+                      <h2>Thống kê định mức</h2>
+                      <small className="caption">Tổng hợp số lượng sản phẩm theo các phân nhóm tồn</small>
+                    </div>
+                    <button className="ghost-btn" onClick={loadAnalytics}>
+                      Cập nhật
+                    </button>
+                  </div>
+
                   <div className="quick-stats-grid">
                     <div className="stat-box">
                       <span className="stat-label">Tổng mặt hàng</span>
                       <strong className="stat-val">{analyticsData.metrics?.total_products || 0}</strong>
                     </div>
-                    <div className="stat-box danger">
+                    <div className="stat-box">
                       <span className="stat-label">Hết hàng (0 tồn)</span>
-                      <strong className="stat-val">{analyticsData.metrics?.out_of_stock_count || 0}</strong>
+                      <strong className="stat-val" style={{ color: 'var(--status-danger-ink)' }}>
+                        {analyticsData.metrics?.out_of_stock_count || 0}
+                      </strong>
                     </div>
-                    <div className="stat-box warning">
+                    <div className="stat-box">
                       <span className="stat-label">Dưới mức tối thiểu</span>
-                      <strong className="stat-val">{analyticsData.metrics?.low_stock_count || 0}</strong>
+                      <strong className="stat-val" style={{ color: 'var(--status-warn-ink)' }}>
+                        {analyticsData.metrics?.low_stock_count || 0}
+                      </strong>
                     </div>
-                    <div className="stat-box success">
+                    <div className="stat-box">
                       <span className="stat-label">Tồn an toàn</span>
-                      <strong className="stat-val">{analyticsData.metrics?.healthy_stock_count || 0}</strong>
+                      <strong className="stat-val" style={{ color: 'var(--status-ok-ink)' }}>
+                        {analyticsData.metrics?.healthy_stock_count || 0}
+                      </strong>
                     </div>
                   </div>
 
-                  <div className="cost-estimate-banner">
-                    <div>
-                      <small>Dự toán ngân sách nhập hàng đề xuất:</small>
-                      <strong>
-                        {analyticsData.metrics?.total_estimated_reorder_cost
-                          ? `${Number(analyticsData.metrics.total_estimated_reorder_cost).toLocaleString('vi-VN')} VNĐ`
-                          : '0 VNĐ'}
-                      </strong>
-                    </div>
-                    <button className="refresh-btn" onClick={loadAnalytics}>
-                      🔄 Cập nhật AI
-                    </button>
+                  <div style={{ marginTop: '16px', padding: '12px 14px', backgroundColor: '#FAF8EE', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)' }}>
+                    <span className="caption">Dự toán ngân sách nhập hàng khuyến nghị:</span>
+                    <strong className="tabular" style={{ display: 'block', fontSize: '15px', marginTop: '2px', color: 'var(--ink)' }}>
+                      {analyticsData.metrics?.total_estimated_reorder_cost
+                        ? `${Number(analyticsData.metrics.total_estimated_reorder_cost).toLocaleString('vi-VN')} VNĐ`
+                        : '0 VNĐ'}
+                    </strong>
                   </div>
                 </div>
               </div>
 
-              {/* AI Anomalies & Warnings */}
-              {analyticsData.anomalies && analyticsData.anomalies.length > 0 && (
-                <div className="anomalies-section panel">
-                  <div className="section-title-row">
-                    <h3>⚠️ Cảnh Báo Bất Thường & Rủi Ro Phát Hiện Bằng AI</h3>
-                    <span className="badge-count">{analyticsData.anomalies.length} vấn đề</span>
+              {/* Recommendations Table */}
+              <div className="recommendations-section">
+                <div className="panel-header">
+                  <div className="panel-title-group">
+                    <h2>Khuyến nghị bổ sung hàng tồn (Smart Reorder)</h2>
+                    <small className="caption">Số lượng đề xuất và nhà cung cấp tương ứng dựa trên dữ liệu tiêu hao</small>
                   </div>
-                  <div className="anomalies-cards-grid">
-                    {analyticsData.anomalies.map((ano, idx) => (
-                      <div key={idx} className={`anomaly-card severity-${ano.severity?.toLowerCase()}`}>
-                        <div className="anomaly-header">
-                          <span className="anomaly-tag">{ano.type}</span>
-                          <strong>{ano.title}</strong>
-                        </div>
-                        <p>{ano.description}</p>
-                        <div className="anomaly-action-box">
-                          <span>👉 Đề xuất hành động:</span> {ano.action}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* AI Recommendations Table */}
-              <div className="recommendations-section panel">
-                <div className="section-title-row">
-                  <h3>📋 Khuyến Nghị Bổ Sung Hàng Tối Ưu (Smart Reorder)</h3>
-                  <p>AI tự động tính toán số lượng đặt hàng tiêu chuẩn và gợi ý nhà phân phối chính xác.</p>
                 </div>
 
                 {analyticsData.recommendations && analyticsData.recommendations.length > 0 ? (
-                  <div className="reorder-table-responsive">
-                    <table className="ai-data-table">
+                  <div className="table-container">
+                    <table>
                       <thead>
                         <tr>
                           <th>Mức độ</th>
                           <th>Sản phẩm</th>
-                          <th>Tồn kho / Tối thiểu</th>
-                          <th>AI Đề xuất nhập</th>
+                          <th className="num">Tồn / Tối thiểu</th>
+                          <th className="num">Đề xuất nhập</th>
                           <th>Nhà cung cấp</th>
-                          <th>Lý do từ AI</th>
-                          <th>Thao tác</th>
+                          <th>Lý do phân tích</th>
+                          <th style={{ textAlign: 'right' }}>Thao tác</th>
                         </tr>
                       </thead>
                       <tbody>
                         {analyticsData.recommendations.map((rec) => (
                           <tr key={rec.product_id}>
                             <td>
-                              <span
-                                className="urgency-badge"
-                                style={{ backgroundColor: `${rec.urgency_color}22`, color: rec.urgency_color, borderColor: rec.urgency_color }}
-                              >
-                                {rec.urgency_label}
+                              <span className="status warning">
+                                {rec.urgency_label || 'Cần bổ sung'}
                               </span>
                             </td>
                             <td>
                               <strong>{rec.product_name}</strong>
-                              <small className="sub-code">{rec.product_code}</small>
+                              <small className="caption" style={{ display: 'block' }}>{rec.product_code}</small>
+                            </td>
+                            <td className="num">
+                              <span className="tabular">{rec.current_stock} / {rec.minimum_stock}</span>
+                            </td>
+                            <td className="num">
+                              <strong className="tabular">+{rec.suggested_quantity}</strong>
                             </td>
                             <td>
-                              <span className="stock-ratio">
-                                <span className={rec.current_stock === 0 ? 'text-danger' : 'text-warning'}>
-                                  {rec.current_stock}
-                                </span>{' '}
-                                / {rec.minimum_stock}
-                              </span>
+                              <span>{rec.supplier_name}</span>
                             </td>
                             <td>
-                              <strong className="suggested-qty">+{rec.suggested_quantity}</strong> cái
+                              <small style={{ color: 'var(--ink-muted)' }}>{rec.ai_reason}</small>
                             </td>
-                            <td>
-                              <span className="supplier-tag">{rec.supplier_name}</span>
-                            </td>
-                            <td className="reason-cell">
-                              <small>{rec.ai_reason}</small>
-                            </td>
-                            <td>
+                            <td style={{ textAlign: 'right' }}>
                               <button
-                                className="apply-btn"
+                                className="ghost-btn"
+                                style={{ padding: '4px 10px', fontSize: '12px', minHeight: '30px' }}
                                 onClick={() => handleApplyRecommendation(rec)}
                                 disabled={applyingRecId === rec.product_id}
                               >
-                                {applyingRecId === rec.product_id ? 'Đang tạo...' : 'Tạo phiếu nhập'}
+                                {applyingRecId === rec.product_id ? 'Đang xử lý...' : 'Tạo phiếu nhập'}
                               </button>
                             </td>
                           </tr>
@@ -771,10 +678,8 @@ function AITab() {
                     </table>
                   </div>
                 ) : (
-                  <div className="empty-reorder-box">
-                    <span>🎉</span>
-                    <h4>Kho hàng đang ở trạng thái tối ưu!</h4>
-                    <p>Không có sản phẩm nào chạm ngưỡng thiếu hàng. AI sẽ tiếp tục theo dõi biến động xuất nhập kho.</p>
+                  <div style={{ padding: '32px', textAlign: 'center', color: 'var(--ink-muted)' }}>
+                    Tất cả mặt hàng đều đảm bảo số lượng tồn kho an toàn.
                   </div>
                 )}
               </div>

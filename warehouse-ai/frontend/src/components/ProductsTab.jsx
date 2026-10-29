@@ -6,6 +6,7 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,7 +68,6 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
       setUnits(uns || []);
       setSuppliers(supps || []);
       
-      // Set defaults if available
       if (cats?.length > 0 && uns?.length > 0) {
         setFormData(prev => ({
           ...prev,
@@ -80,7 +80,7 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
         setImportSupplierId(supps[0].id);
       }
     } catch (err) {
-      console.error("Lỗi khi tải dữ liệu cấu hình:", err);
+      console.error("Lỗi khi nạp dữ liệu danh mục:", err);
     }
   };
 
@@ -98,13 +98,13 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
   };
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xoá hàng hoá "${name}" không? Thao tác này không thể hoàn tác.`)) {
+    if (window.confirm(`Xác nhận xóa hàng hóa "${name}"? Thao tác này không thể hoàn tác.`)) {
       try {
         await api.deleteProduct(id);
-        showNotification(`Đã xoá hàng hoá "${name}".`);
+        showNotification(`Đã xóa hàng hóa "${name}".`);
         loadProducts();
       } catch (err) {
-        alert(`Lỗi khi xoá: ${err.message}`);
+        alert(`Lỗi khi xóa: ${err.message}`);
       }
     }
   };
@@ -134,13 +134,12 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
       showNotification(`Đã thêm mới sản phẩm "${submitData.name}".`);
       loadProducts();
     } catch (err) {
-      alert(`Lỗi khi tạo hàng hoá: ${err.message}`);
+      alert(`Lỗi khi tạo hàng hóa: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Buyer Order
   const openOrderModal = (product) => {
     setSelectedProduct(product);
     setOrderQuantity(1);
@@ -156,7 +155,7 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
       
       const submitData = {
         receipt_date: new Date().toISOString().split('T')[0],
-        notes: `Đơn đặt hàng từ Buyer - Sản phẩm: ${selectedProduct.name}`,
+        notes: `Yêu cầu xuất hàng: ${selectedProduct.name}`,
         items: [
           {
             product_id: selectedProduct.id,
@@ -166,23 +165,21 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
       };
       
       await api.createExportReceipt(submitData);
-      
       setIsOrderModalOpen(false);
-      showNotification(`Đặt hàng thành công! Đơn hàng đã được gửi cho kho.`);
+      showNotification(`Đã tạo phiếu xuất kho thành công.`);
       loadProducts();
     } catch (err) {
-      alert(`Lỗi khi đặt hàng: ${err.message}`);
+      alert(`Lỗi khi tạo yêu cầu: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Quick Import for Admin & Staff
   const openQuickImportModal = (product) => {
     setImportProduct(product);
     setImportQuantity(10);
     setImportUnitPrice(100000);
-    setImportNotes(`Nhập hàng nhanh cho ${product.name}`);
+    setImportNotes(`Nhập bổ sung cho SKU ${product.code}`);
     if (suppliers.length > 0 && !importSupplierId) {
       setImportSupplierId(suppliers[0].id);
     }
@@ -200,7 +197,7 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
     }
 
     if (!importSupplierId) {
-      alert("Vui lòng chọn Nhà cung cấp");
+      alert("Vui lòng chọn nhà cung cấp");
       return;
     }
 
@@ -211,7 +208,7 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
         supplier_id: parseInt(importSupplierId),
         receipt_date: new Date().toISOString().split('T')[0],
         notes: importNotes || `Nhập kho nhanh cho SKU ${importProduct.code}`,
-        auto_confirm: true, // XÁC NHẬN NHẬP KHO NGAY LẬP TỨC
+        auto_confirm: true,
         items: [
           {
             product_id: importProduct.id,
@@ -223,10 +220,8 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
       };
       
       const receipt = await api.createImportReceipt(submitData);
-      
       setIsImportModalOpen(false);
-      showNotification(`🎉 Đã nhập thành công ${qty} sản phẩm cho "${importProduct.name}"! Tồn kho đã tăng từ ${importProduct.current_stock} lên ${importProduct.current_stock + qty}. (Mã phiếu: ${receipt.receipt_code})`);
-      
+      showNotification(`Đã nhập thành công ${qty} sản phẩm cho "${importProduct.name}". Mã phiếu: ${receipt.receipt_code}`);
       await loadProducts();
     } catch (err) {
       alert(`Lỗi khi nhập hàng: ${err.message}`);
@@ -239,151 +234,205 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
   };
 
+  const filteredProducts = products.filter((p) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase().trim();
+    return (
+      (p.code && p.code.toLowerCase().includes(term)) ||
+      (p.name && p.name.toLowerCase().includes(term)) ||
+      (p.category?.name && p.category.name.toLowerCase().includes(term))
+    );
+  });
+
   return (
     <>
+      {/* Page Topbar Header: 1 Primary CTA */}
       <header className="topbar">
-        <div>
-          <p className="eyebrow">{isBuyer ? 'Cửa hàng' : 'Quản lý kho & Danh mục'}</p>
+        <div className="topbar-left">
+          <p className="eyebrow">Danh mục & Tồn kho</p>
           <h1>Hàng hóa</h1>
+          <p className="topbar-desc">
+            Quản lý mã định danh SKU, đơn vị tính và định mức tồn kho an toàn cho toàn bộ mặt hàng.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {canImport && onNavigateTab && (
-            <button 
-              className="ghost-btn" 
-              onClick={() => onNavigateTab('imports')}
-              style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}
-            >
-              📋 Lịch sử nhập kho
-            </button>
-          )}
-          {isAdmin && (
+        <div className="topbar-actions">
+          {isAdmin ? (
             <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-              + Thêm hàng hóa mới
+              Thêm hàng hóa mới
             </button>
-          )}
+          ) : canImport && onNavigateTab ? (
+            <button className="primary-btn" onClick={() => onNavigateTab('imports')}>
+              Tạo phiếu nhập mới
+            </button>
+          ) : null}
         </div>
       </header>
 
       {/* Thông báo thành công */}
       {successMsg && (
-        <div style={{
-          padding: '14px 18px',
-          background: 'rgba(34, 197, 94, 0.15)',
-          border: '1px solid rgba(34, 197, 94, 0.4)',
-          color: '#86efac',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          fontSize: '0.95rem'
-        }}>
-          {successMsg}
+        <div className="alert-banner success" role="status">
+          <span>{successMsg}</span>
         </div>
       )}
 
       {error && (
-        <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5', borderRadius: '8px', marginBottom: '16px' }}>
-          ⚠️ {error}
+        <div className="alert-banner error" role="alert">
+          <span>{error}</span>
         </div>
       )}
 
+      {/* Main panel */}
       <article className="panel">
         <div className="panel-header">
-          <div>
-            <h2>Danh sách tất cả sản phẩm ({products.length})</h2>
-            <small style={{ color: '#94a3b8' }}>
-              {canImport ? 'Admin và Nhân viên có thể bấm "📥 Nhập hàng" trực tiếp cho từng mặt hàng' : 'Xem thông tin và đặt hàng'}
-            </small>
+          <div className="panel-title-group">
+            <h2>Danh sách hàng hóa ({filteredProducts.length})</h2>
+            <small className="caption">Bấm "Nhập hàng" để tạo phiếu nhập bổ sung cho từng SKU</small>
           </div>
-          <button className="ghost-btn" onClick={loadProducts}>🔄 Làm mới</button>
+          <button className="ghost-btn" onClick={loadProducts}>
+            Làm mới danh sách
+          </button>
+        </div>
+
+        {/* Search bar with clean SVG icon */}
+        <div className="toolbar-row">
+          <div className="search-input-wrapper">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+            </svg>
+            <input 
+              type="text"
+              placeholder="Tìm theo mã SKU, tên hàng hóa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Tìm kiếm sản phẩm"
+            />
+          </div>
+          {searchTerm && (
+            <button 
+              className="text-btn" 
+              onClick={() => setSearchTerm('')}
+              style={{ fontSize: '12px' }}
+            >
+              Xóa bộ lọc
+            </button>
+          )}
         </div>
 
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Đang tải dữ liệu...</div>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--ink-muted)' }}>
+            Đang tải danh sách hàng hóa...
+          </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-container">
             <table>
               <thead>
                 <tr>
                   <th>Mã SKU</th>
-                  <th>Tên Sản Phẩm</th>
+                  <th>Tên sản phẩm</th>
                   <th>Danh mục</th>
                   <th>Đơn vị</th>
-                  <th>Tồn kho</th>
-                  {isAdmin && <th>Mức tối thiểu</th>}
+                  <th className="num">Tồn thực tế</th>
+                  {isAdmin && <th className="num">Mức tối thiểu</th>}
                   <th>Trạng thái</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                      Chưa có sản phẩm nào trong hệ thống.
+                    <td 
+                      colSpan={isAdmin ? 8 : 7} 
+                      style={{ textAlign: 'center', padding: '36px', color: 'var(--ink-subtle)' }}
+                    >
+                      {searchTerm ? 'Không tìm thấy sản phẩm nào khớp với từ khóa tìm kiếm.' : 'Chưa có sản phẩm nào trong hệ thống.'}
                     </td>
                   </tr>
                 ) : (
-                  products.map((p) => (
-                    <tr key={p.id}>
-                      <td><strong style={{ color: '#38bdf8' }}>{p.code}</strong></td>
-                      <td>
-                        <strong>{p.name}</strong>
-                        {p.description && <small style={{ display: 'block', color: '#94a3b8' }}>{p.description}</small>}
-                      </td>
-                      <td>{p.category?.name || 'N/A'}</td>
-                      <td>{p.unit?.name || 'N/A'}</td>
-                      <td>
-                        <strong style={{ fontSize: '1.05rem', color: p.current_stock === 0 ? '#f87171' : '#f8fafc' }}>
-                          {p.current_stock}
-                        </strong>
-                      </td>
-                      {isAdmin && <td>{p.minimum_stock}</td>}
-                      <td>
-                        <span className={`status ${p.current_stock < p.minimum_stock ? 'warning' : 'ok'}`}>
-                          {p.current_stock === 0 ? 'Hết hàng' : (p.current_stock < p.minimum_stock ? 'Sắp hết' : 'Còn hàng')}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        {/* Nút nhập hàng nhanh cho Admin và Nhân viên */}
-                        {canImport && (
-                          <button 
-                            className="primary-btn" 
-                            style={{
-                              padding: '5px 12px',
-                              fontSize: '0.82rem',
-                              marginRight: '6px',
-                              background: 'linear-gradient(135deg, #0284c7, #2563eb)',
-                              boxShadow: 'none'
-                            }}
-                            onClick={() => openQuickImportModal(p)}
-                            title={`Nhập hàng thêm cho ${p.name}`}
-                          >
-                            📥 Nhập hàng
-                          </button>
-                        )}
-                        
+                  filteredProducts.map((p) => {
+                    const isOutOfStock = p.current_stock <= 0;
+                    const isLowStock = !isOutOfStock && p.current_stock < p.minimum_stock;
+                    const categoryDisplay = p.category?.name && p.category.name !== 'N/A' ? p.category.name : '—';
+                    const unitDisplay = p.unit?.name && p.unit.name !== 'N/A' ? p.unit.name : '—';
+
+                    return (
+                      <tr key={p.id}>
+                        <td>
+                          <span className="sku-code">{p.code}</span>
+                        </td>
+                        <td>
+                          <strong style={{ fontWeight: 500 }}>{p.name}</strong>
+                          {p.description && (
+                            <small className="caption" style={{ display: 'block', marginTop: '2px' }}>
+                              {p.description}
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          {categoryDisplay === '—' ? <span className="empty-cell">—</span> : categoryDisplay}
+                        </td>
+                        <td>
+                          {unitDisplay === '—' ? <span className="empty-cell">—</span> : unitDisplay}
+                        </td>
+                        <td className="num">
+                          <strong style={{ fontWeight: 600 }}>{p.current_stock}</strong>
+                        </td>
                         {isAdmin && (
-                          <button 
-                            className="ghost-btn" 
-                            style={{ color: '#fca5a5', padding: '5px 8px', fontSize: '0.82rem' }}
-                            onClick={() => handleDelete(p.id, p.name)}
-                            title="Xoá hàng hoá"
-                          >
-                            Xoá
-                          </button>
+                          <td className="num">
+                            <span style={{ color: 'var(--ink-muted)' }}>{p.minimum_stock}</span>
+                          </td>
                         )}
-                        
-                        {isBuyer && (
-                          <button 
-                            className="primary-btn" 
-                            style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-                            onClick={() => openOrderModal(p)}
-                            disabled={p.current_stock === 0}
+                        <td>
+                          <span 
+                            className={`status ${
+                              isOutOfStock 
+                                ? 'danger' 
+                                : isLowStock 
+                                ? 'warning' 
+                                : 'ok'
+                            }`}
                           >
-                            {p.current_stock === 0 ? 'Hết hàng' : 'Đặt hàng'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                            {isOutOfStock ? 'Hết hàng' : isLowStock ? 'Sắp hết' : 'Còn hàng'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                            {canImport && (
+                              <button 
+                                className="ghost-btn" 
+                                style={{ padding: '4px 10px', fontSize: '12px', minHeight: '30px' }}
+                                onClick={() => openQuickImportModal(p)}
+                              >
+                                Nhập hàng
+                              </button>
+                            )}
+
+                            {isBuyer && (
+                              <button 
+                                className="ghost-btn" 
+                                style={{ padding: '4px 10px', fontSize: '12px', minHeight: '30px' }}
+                                onClick={() => openOrderModal(p)}
+                                disabled={p.current_stock === 0}
+                              >
+                                Đặt hàng
+                              </button>
+                            )}
+
+                            {isAdmin && (
+                              <button 
+                                className="text-btn danger-btn" 
+                                style={{ padding: '4px 8px', fontSize: '12px', minHeight: '30px' }}
+                                onClick={() => handleDelete(p.id, p.name)}
+                                title="Xóa hàng hóa"
+                              >
+                                Xóa
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -391,16 +440,22 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
         )}
       </article>
 
-      {/* Modal Nhập Hàng Nhanh (Dành cho Admin & Nhân Viên) */}
+      {/* Modal Nhập hàng nhanh (Admin & Staff) - Radius max 6px */}
       {isImportModalOpen && importProduct && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '560px' }}>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-content" style={{ maxWidth: '540px' }}>
             <div className="modal-header">
               <div>
-                <h2>📥 Nhập hàng vào kho</h2>
-                <small style={{ color: '#94a3b8' }}>Ghi nhận lô hàng mới và cộng thẳng vào tồn kho</small>
+                <h2>Nhập hàng vào kho</h2>
+                <small className="caption">Ghi nhận lô hàng mới và cộng thẳng vào tồn kho thực tế</small>
               </div>
-              <button className="ghost-btn" onClick={() => setIsImportModalOpen(false)} style={{ padding: '4px' }}>✕</button>
+              <button 
+                className="text-btn" 
+                onClick={() => setIsImportModalOpen(false)} 
+                aria-label="Đóng cửa sổ"
+              >
+                ✕
+              </button>
             </div>
             
             <form onSubmit={handleQuickImport}>
@@ -408,106 +463,106 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
                 {/* Thông tin sản phẩm */}
                 <div style={{
                   padding: '12px 14px',
-                  background: 'rgba(30, 41, 59, 0.6)',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  backgroundColor: '#FAF8EE',
+                  border: '1px solid var(--line)',
+                  borderRadius: 'var(--radius-sm)',
                   marginBottom: '16px'
                 }}>
-                  <p style={{ margin: '0 0 4px', color: '#94a3b8', fontSize: '0.8rem' }}>Sản phẩm tiếp nhận:</p>
-                  <strong style={{ fontSize: '1.05rem', color: '#f8fafc' }}>{importProduct.name}</strong>
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '6px', fontSize: '0.85rem' }}>
-                    <span>Mã SKU: <strong style={{ color: '#38bdf8' }}>{importProduct.code}</strong></span>
-                    <span>Đơn vị: <strong>{importProduct.unit?.name || 'Cái'}</strong></span>
-                    <span>Tồn kho hiện tại: <strong style={{ color: '#86efac' }}>{importProduct.current_stock}</strong></span>
+                  <span className="caption" style={{ display: 'block', marginBottom: '2px' }}>Sản phẩm tiếp nhận:</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--ink)' }}>{importProduct.name}</strong>
+                  <div style={{ display: 'flex', gap: '16px', marginTop: '6px', fontSize: '12px' }}>
+                    <span>Mã SKU: <strong className="tabular">{importProduct.code}</strong></span>
+                    <span>Đơn vị: <strong>{importProduct.unit?.name || '—'}</strong></span>
+                    <span>Tồn hiện tại: <strong className="tabular">{importProduct.current_stock}</strong></span>
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>Nhà cung cấp giao hàng *</label>
+                  <label htmlFor="import-supplier">Nhà cung cấp giao hàng</label>
                   <select 
+                    id="import-supplier"
                     required
                     value={importSupplierId}
                     onChange={(e) => setImportSupplierId(e.target.value)}
-                    style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
                   >
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
-                    {suppliers.length === 0 && <option value="">Đang tải NCC...</option>}
+                    {suppliers.length === 0 && <option value="">Đang nạp danh sách...</option>}
                   </select>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="form-group">
-                    <label>Số lượng nhập *</label>
+                    <label htmlFor="import-qty">Số lượng nhập</label>
                     <input 
+                      id="import-qty"
                       type="number" 
                       min="1"
                       required 
                       value={importQuantity}
                       onChange={(e) => setImportQuantity(e.target.value)}
-                      style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
                     />
                   </div>
-                  
+
                   <div className="form-group">
-                    <label>Đơn giá nhập (VNĐ)</label>
+                    <label htmlFor="import-price">Đơn giá nhập (VNĐ)</label>
                     <input 
+                      id="import-price"
                       type="number" 
                       min="0"
                       step="1000"
                       required 
                       value={importUnitPrice}
                       onChange={(e) => setImportUnitPrice(e.target.value)}
-                      style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>Ghi chú nhập hàng</label>
+                  <label htmlFor="import-notes">Ghi chú phiếu nhập</label>
                   <input 
+                    id="import-notes"
                     type="text" 
-                    placeholder="VD: Nhập thêm đợt hàng thứ 2, kiểm đếm đủ..."
+                    placeholder="Ghi chú đợt giao, chứng từ kiểm đếm..."
                     value={importNotes}
                     onChange={(e) => setImportNotes(e.target.value)}
-                    style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
                   />
                 </div>
 
                 {/* Dự kiến tồn kho sau nhập */}
                 <div style={{
                   padding: '12px 14px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  marginTop: '10px',
+                  backgroundColor: 'var(--status-ok-bg)',
+                  border: '1px solid #BBF7D0',
+                  borderRadius: 'var(--radius-sm)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Dự kiến tồn kho sau khi nhập:</span>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.95rem' }}>
-                      {importProduct.current_stock} ➔ <strong style={{ color: '#86efac', fontSize: '1.1rem' }}>{importProduct.current_stock + (parseInt(importQuantity) || 0)}</strong> {importProduct.unit?.name || 'đơn vị'}
+                    <span className="caption" style={{ color: 'var(--status-ok-ink)' }}>Dự kiến tồn kho sau nhập:</span>
+                    <p style={{ margin: '2px 0 0', fontWeight: 600, color: 'var(--status-ok-ink)' }} className="tabular">
+                      {importProduct.current_stock} ➔ {importProduct.current_stock + (parseInt(importQuantity) || 0)} {importProduct.unit?.name || ''}
                     </p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Tổng tiền lô nhập:</span>
-                    <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#38bdf8', fontSize: '1.05rem' }}>
+                    <span className="caption" style={{ color: 'var(--status-ok-ink)' }}>Tổng tiền lô hàng:</span>
+                    <p style={{ margin: '2px 0 0', fontWeight: 600, color: 'var(--status-ok-ink)' }} className="tabular">
                       {formatCurrency((parseInt(importQuantity) || 0) * (parseFloat(importUnitPrice) || 0))}
                     </p>
                   </div>
                 </div>
               </div>
               
-              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <button type="button" className="ghost-btn" onClick={() => setIsImportModalOpen(false)}>Huỷ</button>
+              <div className="modal-footer">
+                <button type="button" className="ghost-btn" onClick={() => setIsImportModalOpen(false)}>
+                  Hủy bỏ
+                </button>
                 <button 
                   type="submit" 
                   className="primary-btn" 
                   disabled={isSubmitting || !importQuantity || parseInt(importQuantity) <= 0}
-                  style={{ background: 'linear-gradient(135deg, #10b981, #2563eb)' }}
                 >
-                  {isSubmitting ? 'Đang nhập...' : '📥 Xác nhận nhập kho ngay'}
+                  {isSubmitting ? 'Đang ghi nhận...' : 'Xác nhận nhập kho'}
                 </button>
               </div>
             </form>
@@ -515,34 +570,45 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
         </div>
       )}
 
-      {/* Modal Thêm Hàng Hoá Mới (Admin) */}
+      {/* Modal Thêm Hàng Hóa Mới (Admin) */}
       {isModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>Thêm hàng hoá mới</h2>
-              <button className="ghost-btn" onClick={() => setIsModalOpen(false)} style={{ padding: '4px' }}>✕</button>
+              <div>
+                <h2>Thêm hàng hóa mới</h2>
+                <small className="caption">Khai báo thông tin sản phẩm và ngưỡng an toàn</small>
+              </div>
+              <button 
+                className="text-btn" 
+                onClick={() => setIsModalOpen(false)} 
+                aria-label="Đóng cửa sổ"
+              >
+                ✕
+              </button>
             </div>
             
             <form onSubmit={handleCreate}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label>Mã SKU *</label>
+                  <label htmlFor="create-sku">Mã SKU *</label>
                   <input 
+                    id="create-sku"
                     type="text" 
                     required 
-                    placeholder="VD: PROD-999"
+                    placeholder="Ví dụ: PROD-101"
                     value={formData.code}
                     onChange={(e) => setFormData({...formData, code: e.target.value})}
                   />
                 </div>
                 
                 <div className="form-group">
-                  <label>Tên sản phẩm *</label>
+                  <label htmlFor="create-name">Tên sản phẩm *</label>
                   <input 
+                    id="create-name"
                     type="text" 
                     required 
-                    placeholder="VD: Màn hình Dell 27 inch"
+                    placeholder="Ví dụ: Cáp mạng Cat6 UTP 305m"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                   />
@@ -550,8 +616,9 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label>Danh mục</label>
+                    <label htmlFor="create-cat">Danh mục</label>
                     <select 
+                      id="create-cat"
                       required
                       value={formData.category_id}
                       onChange={(e) => setFormData({...formData, category_id: e.target.value})}
@@ -562,8 +629,9 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
                   </div>
                   
                   <div className="form-group">
-                    <label>Đơn vị tính</label>
+                    <label htmlFor="create-unit">Đơn vị tính</label>
                     <select 
+                      id="create-unit"
                       required
                       value={formData.unit_id}
                       onChange={(e) => setFormData({...formData, unit_id: e.target.value})}
@@ -575,8 +643,9 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
                 </div>
                 
                 <div className="form-group">
-                  <label>Mức tồn kho tối thiểu (Cảnh báo khi dưới mức này)</label>
+                  <label htmlFor="create-min-stock">Mức tồn kho tối thiểu (Cảnh báo khi dưới mức này)</label>
                   <input 
+                    id="create-min-stock"
                     type="number" 
                     min="0"
                     required 
@@ -587,7 +656,9 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
               </div>
               
               <div className="modal-footer">
-                <button type="button" className="ghost-btn" onClick={() => setIsModalOpen(false)}>Huỷ</button>
+                <button type="button" className="ghost-btn" onClick={() => setIsModalOpen(false)}>
+                  Hủy bỏ
+                </button>
                 <button type="submit" className="primary-btn" disabled={isSubmitting}>
                   {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
                 </button>
@@ -597,23 +668,27 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
         </div>
       )}
 
-      {/* Modal Đặt Hàng (Buyer) */}
+      {/* Modal Đặt hàng (Buyer) */}
       {isOrderModalOpen && selectedProduct && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>Xác nhận đặt hàng</h2>
-              <button className="ghost-btn" onClick={() => setIsOrderModalOpen(false)} style={{ padding: '4px' }}>✕</button>
+              <div>
+                <h2>Xác nhận đặt hàng</h2>
+                <small className="caption">Tạo lệnh yêu cầu xuất sản phẩm từ kho</small>
+              </div>
+              <button className="text-btn" onClick={() => setIsOrderModalOpen(false)}>✕</button>
             </div>
             
             <form onSubmit={handleOrder}>
               <div className="modal-body">
-                <p style={{ color: '#cbd5e1', marginBottom: '16px' }}>
-                  Bạn đang đặt mua sản phẩm: <strong>{selectedProduct.name}</strong> ({selectedProduct.code})
+                <p style={{ color: 'var(--ink)', marginBottom: '16px' }}>
+                  Sản phẩm đặt mua: <strong>{selectedProduct.name}</strong> (<span className="tabular">{selectedProduct.code}</span>)
                 </p>
                 <div className="form-group">
-                  <label>Số lượng cần đặt</label>
+                  <label htmlFor="order-qty">Số lượng cần đặt</label>
                   <input 
+                    id="order-qty"
                     type="number" 
                     min="1"
                     max={selectedProduct.current_stock}
@@ -621,16 +696,22 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
                     value={orderQuantity}
                     onChange={(e) => setOrderQuantity(e.target.value)}
                   />
-                  <small style={{ color: '#94a3b8', display: 'block', marginTop: '6px' }}>
-                    Số lượng tối đa có thể đặt: {selectedProduct.current_stock}
+                  <small className="caption" style={{ display: 'block', marginTop: '6px' }}>
+                    Khả dụng trong kho: <span className="tabular">{selectedProduct.current_stock}</span>
                   </small>
                 </div>
               </div>
               
               <div className="modal-footer">
-                <button type="button" className="ghost-btn" onClick={() => setIsOrderModalOpen(false)}>Huỷ</button>
-                <button type="submit" className="primary-btn" disabled={isSubmitting || orderQuantity < 1 || orderQuantity > selectedProduct.current_stock}>
-                  {isSubmitting ? 'Đang gửi...' : 'Xác nhận đặt'}
+                <button type="button" className="ghost-btn" onClick={() => setIsOrderModalOpen(false)}>
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="submit" 
+                  className="primary-btn" 
+                  disabled={isSubmitting || orderQuantity < 1 || orderQuantity > selectedProduct.current_stock}
+                >
+                  {isSubmitting ? 'Đang gửi...' : 'Xác nhận đặt hàng'}
                 </button>
               </div>
             </form>

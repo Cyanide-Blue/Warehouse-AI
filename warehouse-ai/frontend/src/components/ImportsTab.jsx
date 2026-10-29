@@ -51,7 +51,7 @@ function ImportsTab({ userRole, currentUser }) {
         setItems([{ product_id: prods[0].id, quantity: 1, unit_price: 0 }]);
       }
     } catch (err) {
-      console.error("Lỗi khi tải dữ liệu dropdown:", err);
+      console.error("Lỗi khi nạp dữ liệu danh mục:", err);
     }
   };
 
@@ -75,10 +75,9 @@ function ImportsTab({ userRole, currentUser }) {
     }, 4000);
   };
 
-  // Create receipt (supports auto_confirm: true/false)
   const handleCreate = async (autoConfirm = false) => {
     if (!formData.supplier_id) {
-      alert("Vui lòng chọn Nhà cung cấp");
+      alert("Vui lòng chọn nhà cung cấp");
       return;
     }
 
@@ -104,14 +103,13 @@ function ImportsTab({ userRole, currentUser }) {
       };
       
       const res = await api.createImportReceipt(submitData);
-      
       setIsModalOpen(false);
       await loadReceipts();
       
       if (autoConfirm) {
-        showNotification(`✅ Đã lập và XÁC NHẬN nhập kho thành công phiếu ${res.receipt_code}! Tồn kho đã được cập nhật.`);
+        showNotification(`Đã lập và xác nhận nhập kho thành công phiếu ${res.receipt_code}. Tồn kho đã được cập nhật.`);
       } else {
-        showNotification(`💾 Đã tạo phiếu nhập ${res.receipt_code} ở trạng thái bản nháp.`);
+        showNotification(`Đã tạo phiếu nhập ${res.receipt_code} ở trạng thái chờ xác nhận.`);
       }
       
       // Reset form
@@ -129,18 +127,15 @@ function ImportsTab({ userRole, currentUser }) {
     }
   };
 
-  // Confirm an existing draft receipt
   const handleConfirmReceipt = async (receiptId, receiptCode) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn XÁC NHẬN nhập kho cho phiếu "${receiptCode}"? Thao tác này sẽ cộng hàng vào tồn kho thực tế.`)) {
+    if (!window.confirm(`Xác nhận nhập kho cho phiếu "${receiptCode}"? Thao tác này sẽ ghi nhận hàng vào tồn kho thực tế.`)) {
       return;
     }
 
     try {
       setActionLoadingId(receiptId);
       await api.confirmImportReceipt(receiptId);
-      showNotification(`🎉 Phiếu "${receiptCode}" đã được xác nhận nhập kho thành công! Tồn kho đã tăng.`);
-      
-      // Refresh list & detail if currently open
+      showNotification(`Phiếu "${receiptCode}" đã được xác nhận nhập kho thành công.`);
       await loadReceipts();
       if (selectedReceipt && selectedReceipt.id === receiptId) {
         openDetailModal(receiptId);
@@ -152,35 +147,32 @@ function ImportsTab({ userRole, currentUser }) {
     }
   };
 
-  // Cancel draft receipt
   const handleCancelReceipt = async (receiptId, receiptCode) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn HUỶ phiếu nhập "${receiptCode}" không?`)) {
+    if (!window.confirm(`Xác nhận hủy phiếu nhập "${receiptCode}"?`)) {
       return;
     }
 
     try {
       setActionLoadingId(receiptId);
       await api.cancelImportReceipt(receiptId);
-      showNotification(`⚠️ Phiếu "${receiptCode}" đã được huỷ.`);
+      showNotification(`Phiếu "${receiptCode}" đã được hủy.`);
       await loadReceipts();
       if (selectedReceipt && selectedReceipt.id === receiptId) {
         setSelectedReceipt(null);
       }
     } catch (err) {
-      alert(`Lỗi khi huỷ phiếu: ${err.message}`);
+      alert(`Lỗi khi hủy phiếu: ${err.message}`);
     } finally {
       setActionLoadingId(null);
     }
   };
 
-  // Open receipt detail modal
   const openDetailModal = async (receiptId) => {
     try {
       setIsDetailLoading(true);
       const data = await api.getImportReceipt(receiptId);
       setSelectedReceipt(data);
     } catch (err) {
-      // If endpoint doesn't return full data, find from local list
       const local = receipts.find(r => r.id === receiptId);
       setSelectedReceipt(local);
     } finally {
@@ -204,7 +196,7 @@ function ImportsTab({ userRole, currentUser }) {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return '—';
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
@@ -212,7 +204,6 @@ function ImportsTab({ userRole, currentUser }) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
   };
 
-  // Filtered receipts
   const filteredReceipts = receipts.filter(r => {
     const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
     const term = searchTerm.toLowerCase().trim();
@@ -223,7 +214,6 @@ function ImportsTab({ userRole, currentUser }) {
     return matchesStatus && matchesSearch;
   });
 
-  // Stats calculation
   const totalCount = receipts.length;
   const confirmedCount = receipts.filter(r => r.status === 'CONFIRMED').length;
   const draftCount = receipts.filter(r => r.status === 'DRAFT').length;
@@ -241,141 +231,137 @@ function ImportsTab({ userRole, currentUser }) {
 
   return (
     <>
+      {/* Topbar: 1 Primary CTA */}
       <header className="topbar">
-        <div>
+        <div className="topbar-left">
           <p className="eyebrow">
-            Quản lý giao dịch • {userRole === 'ADMIN' ? '👑 Quản Trị Viên' : '👷 Nhân Viên Kho'}
+            Quản lý giao dịch • {userRole === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên kho'}
           </p>
           <h1>Nhập kho</h1>
+          <p className="topbar-desc">
+            Tiếp nhận lô hàng từ nhà cung cấp, kiểm đếm số lượng và cập nhật vào số dư tồn kho.
+          </p>
         </div>
-        <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-          + Tạo phiếu nhập mới
-        </button>
+        <div className="topbar-actions">
+          <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
+            Tạo phiếu nhập mới
+          </button>
+        </div>
       </header>
 
-      {/* Thông báo thành công */}
+      {/* Notifications */}
       {successMsg && (
-        <div style={{
-          padding: '14px 18px',
-          background: 'rgba(34, 197, 94, 0.15)',
-          border: '1px solid rgba(34, 197, 94, 0.4)',
-          color: '#86efac',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          fontSize: '0.95rem'
-        }}>
+        <div className="alert-banner success" role="status">
           <span>{successMsg}</span>
         </div>
       )}
 
       {error && (
-        <div style={{
-          padding: '14px 18px',
-          background: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid rgba(239, 68, 68, 0.4)',
-          color: '#fca5a5',
-          borderRadius: '12px',
-          marginBottom: '20px'
-        }}>
-          ⚠️ {error}
+        <div className="alert-banner error" role="alert">
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Thẻ thống kê */}
-      <div className="stats-grid" style={{ marginBottom: '24px' }}>
-        <div className="stat-card">
-          <span>Tổng số phiếu</span>
-          <strong>{totalCount}</strong>
-          <em>Toàn bộ lịch sử</em>
-        </div>
-        <div className="stat-card">
-          <span>Đã nhập kho</span>
-          <strong style={{ color: '#86efac' }}>{confirmedCount}</strong>
-          <em style={{ color: '#86efac' }}>Đã cộng vào tồn kho</em>
-        </div>
-        <div className="stat-card">
-          <span>Chờ xác nhận</span>
-          <strong style={{ color: '#fbbf24' }}>{draftCount}</strong>
-          <em style={{ color: '#fbbf24' }}>Cần xác nhận để tăng kho</em>
-        </div>
-        <div className="stat-card">
-          <span>Tổng giá trị đã nhập</span>
-          <strong style={{ fontSize: '1.4rem' }}>{formatCurrency(totalConfirmedAmount)}</strong>
-          <em>Theo chứng từ hoàn thành</em>
-        </div>
-      </div>
+      {/* 4 KPI metrics phẳng */}
+      <section className="kpi-row" aria-label="Thống kê nhập kho">
+        <article className="kpi-item">
+          <span className="kpi-label">Tổng số phiếu</span>
+          <span className="kpi-value">{totalCount}</span>
+          <span className="kpi-sub">Toàn bộ chứng từ</span>
+        </article>
+        <article className="kpi-item">
+          <span className="kpi-label">Đã nhập kho</span>
+          <span className="kpi-value" style={{ color: 'var(--status-ok-ink)' }}>{confirmedCount}</span>
+          <span className="kpi-sub">Đã cộng tồn thực tế</span>
+        </article>
+        <article className="kpi-item">
+          <span className="kpi-label">Chờ xác nhận</span>
+          <span className="kpi-value" style={{ color: 'var(--status-warn-ink)' }}>{draftCount}</span>
+          <span className="kpi-sub">Phiếu nháp chờ duyệt</span>
+        </article>
+        <article className="kpi-item">
+          <span className="kpi-label">Tổng giá trị đã nhập</span>
+          <span className="kpi-value" style={{ fontSize: '20px' }}>{formatCurrency(totalConfirmedAmount)}</span>
+          <span className="kpi-sub">Theo phiếu hoàn thành</span>
+        </article>
+      </section>
 
+      {/* Main panel */}
       <article className="panel">
-        <div className="panel-header" style={{ flexWrap: 'wrap', gap: '16px' }}>
-          <div>
+        <div className="panel-header">
+          <div className="panel-title-group">
             <h2>Lịch sử phiếu nhập kho</h2>
-            <small style={{ color: '#94a3b8' }}>
-              Admin và Nhân viên có thể tạo phiếu và xác nhận nhập hàng trực tiếp vào kho
-            </small>
+            <small className="caption">Xem chi tiết danh sách mặt hàng và thực hiện xác nhận nhập kho</small>
           </div>
+          <button className="ghost-btn" onClick={loadReceipts}>
+            Làm mới danh sách
+          </button>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {/* Bộ lọc trạng thái */}
-            <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.6)', padding: '3px', borderRadius: '8px' }}>
-              <button 
-                className={`ghost-btn ${statusFilter === 'ALL' ? 'active' : ''}`}
-                style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', background: statusFilter === 'ALL' ? '#2563eb' : 'transparent' }}
-                onClick={() => setStatusFilter('ALL')}
-              >
-                Tất cả ({receipts.length})
-              </button>
-              <button 
-                className={`ghost-btn ${statusFilter === 'DRAFT' ? 'active' : ''}`}
-                style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', background: statusFilter === 'DRAFT' ? '#eab308' : 'transparent', color: statusFilter === 'DRAFT' ? '#000' : 'inherit' }}
-                onClick={() => setStatusFilter('DRAFT')}
-              >
-                Chờ xác nhận ({draftCount})
-              </button>
-              <button 
-                className={`ghost-btn ${statusFilter === 'CONFIRMED' ? 'active' : ''}`}
-                style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', background: statusFilter === 'CONFIRMED' ? '#16a34a' : 'transparent' }}
-                onClick={() => setStatusFilter('CONFIRMED')}
-              >
-                Đã nhập ({confirmedCount})
-              </button>
-            </div>
+        {/* Bộ lọc trạng thái dạng Tab gạch chân (KHÔNG dùng pill) */}
+        <div className="filter-tabs" role="tablist">
+          <button 
+            role="tab"
+            aria-selected={statusFilter === 'ALL'}
+            className={`filter-tab-btn ${statusFilter === 'ALL' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('ALL')}
+          >
+            Tất cả ({receipts.length})
+          </button>
+          <button 
+            role="tab"
+            aria-selected={statusFilter === 'DRAFT'}
+            className={`filter-tab-btn ${statusFilter === 'DRAFT' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('DRAFT')}
+          >
+            Chờ xác nhận ({draftCount})
+          </button>
+          <button 
+            role="tab"
+            aria-selected={statusFilter === 'CONFIRMED'}
+            className={`filter-tab-btn ${statusFilter === 'CONFIRMED' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('CONFIRMED')}
+          >
+            Đã nhập ({confirmedCount})
+          </button>
+        </div>
 
-            {/* Tìm kiếm */}
+        {/* Toolbar row with search */}
+        <div className="toolbar-row">
+          <div className="search-input-wrapper">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+            </svg>
             <input 
               type="text"
-              placeholder="🔍 Tìm theo mã phiếu, NCC..."
+              placeholder="Tìm theo mã phiếu, nhà cung cấp..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                background: 'rgba(30, 41, 59, 0.6)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
-                color: '#fff',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '0.85rem'
-              }}
+              aria-label="Tìm kiếm phiếu nhập"
             />
-
-            <button className="ghost-btn" onClick={loadReceipts} title="Tải lại">🔄 Làm mới</button>
           </div>
+          {searchTerm && (
+            <button className="text-btn" onClick={() => setSearchTerm('')} style={{ fontSize: '12px' }}>
+              Xóa bộ lọc
+            </button>
+          )}
         </div>
 
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Đang tải dữ liệu...</div>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--ink-muted)' }}>
+            Đang tải danh sách phiếu nhập kho...
+          </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Mã Phiếu</th>
-                  <th>Ngày Nhập</th>
+                  <th>Mã phiếu</th>
+                  <th>Ngày nhập</th>
                   <th>Nhà cung cấp</th>
-                  <th>Người phụ trách</th>
-                  <th>Mặt hàng</th>
-                  <th>Tổng giá trị</th>
+                  <th className="num">Tổng tiền</th>
+                  <th>Ghi chú</th>
                   <th>Trạng thái</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
@@ -383,75 +369,66 @@ function ImportsTab({ userRole, currentUser }) {
               <tbody>
                 {filteredReceipts.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                      {searchTerm ? 'Không tìm thấy phiếu nào phù hợp với từ khóa.' : 'Chưa có phiếu nhập kho nào.'}
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--ink-subtle)' }}>
+                      Không tìm thấy phiếu nhập nào phù hợp.
                     </td>
                   </tr>
                 ) : (
                   filteredReceipts.map((r) => {
                     const isDraft = r.status === 'DRAFT';
                     const isConfirmed = r.status === 'CONFIRMED';
-                    const isCancelled = r.status === 'CANCELLED';
-                    const creatorName = r.created_by_user?.full_name || r.created_by_user?.username || (typeof r.created_by === 'object' ? r.created_by?.full_name : 'Quản trị / NV');
-                    const itemsCount = r.items?.length || 0;
-
                     return (
                       <tr key={r.id}>
-                        <td><strong style={{ color: '#38bdf8' }}>{r.receipt_code}</strong></td>
+                        <td>
+                          <span className="sku-code">{r.receipt_code}</span>
+                        </td>
                         <td>{formatDate(r.receipt_date)}</td>
                         <td>
-                          <strong>{r.supplier?.name || 'N/A'}</strong>
-                          {r.supplier?.code && <small style={{ display: 'block', color: '#94a3b8' }}>{r.supplier.code}</small>}
+                          <strong>{r.supplier?.name || '—'}</strong>
                         </td>
-                        <td>{creatorName}</td>
-                        <td>{itemsCount > 0 ? `${itemsCount} mặt hàng` : '1 mặt hàng'}</td>
-                        <td><strong>{formatCurrency(r.total_amount)}</strong></td>
+                        <td className="num">
+                          <strong className="tabular">{formatCurrency(r.total_amount)}</strong>
+                        </td>
                         <td>
-                          <span className={`status ${isConfirmed ? 'ok' : isCancelled ? 'danger' : 'warning'}`}>
-                            {isConfirmed ? '✅ Đã nhập kho' : isCancelled ? '❌ Đã huỷ' : '⏳ Chờ xác nhận'}
+                          <span style={{ color: 'var(--ink-muted)' }}>{r.notes || '—'}</span>
+                        </td>
+                        <td>
+                          <span className={`status ${isConfirmed ? 'confirmed' : isDraft ? 'draft' : 'cancelled'}`}>
+                            {isConfirmed ? 'Đã nhập' : isDraft ? 'Chờ xác nhận' : 'Đã hủy'}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          {isDraft && (
-                            <>
+                          <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                            <button 
+                              className="ghost-btn" 
+                              style={{ padding: '4px 10px', fontSize: '12px', minHeight: '30px' }}
+                              onClick={() => openDetailModal(r.id)}
+                            >
+                              Chi tiết
+                            </button>
+
+                            {isDraft && (
                               <button 
                                 className="primary-btn" 
-                                style={{
-                                  fontSize: '0.8rem',
-                                  padding: '5px 10px',
-                                  marginRight: '6px',
-                                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                                  boxShadow: 'none'
-                                }}
-                                disabled={actionLoadingId === r.id}
+                                style={{ padding: '4px 10px', fontSize: '12px', minHeight: '30px' }}
                                 onClick={() => handleConfirmReceipt(r.id, r.receipt_code)}
-                                title="Xác nhận hàng đã vào kho & Tăng tồn kho"
-                              >
-                                {actionLoadingId === r.id ? 'Đang duyệt...' : '✅ Nhập kho'}
-                              </button>
-                              <button 
-                                className="ghost-btn" 
-                                style={{
-                                  fontSize: '0.8rem',
-                                  padding: '5px 8px',
-                                  marginRight: '6px',
-                                  color: '#fca5a5'
-                                }}
                                 disabled={actionLoadingId === r.id}
-                                onClick={() => handleCancelReceipt(r.id, r.receipt_code)}
-                                title="Huỷ phiếu nhập"
                               >
-                                ✕ Huỷ
+                                {actionLoadingId === r.id ? 'Đang duyệt...' : 'Xác nhận nhập'}
                               </button>
-                            </>
-                          )}
-                          <button 
-                            className="ghost-btn" 
-                            style={{ fontSize: '0.8rem', padding: '5px 10px' }}
-                            onClick={() => openDetailModal(r.id)}
-                          >
-                            👁️ Chi tiết
-                          </button>
+                            )}
+
+                            {isDraft && (
+                              <button 
+                                className="text-btn danger-btn" 
+                                style={{ padding: '4px 8px', fontSize: '12px', minHeight: '30px' }}
+                                onClick={() => handleCancelReceipt(r.id, r.receipt_code)}
+                                disabled={actionLoadingId === r.id}
+                              >
+                                Hủy
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -465,189 +442,164 @@ function ImportsTab({ userRole, currentUser }) {
 
       {/* Modal Tạo Phiếu Nhập Mới */}
       {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content large" style={{ maxWidth: '850px' }}>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-content" style={{ maxWidth: '640px' }}>
             <div className="modal-header">
               <div>
                 <h2>Tạo phiếu nhập kho</h2>
-                <small style={{ color: '#94a3b8' }}>Dành cho Admin và Nhân viên kho ghi nhận hàng hóa về kho</small>
+                <small className="caption">Khai báo danh sách mặt hàng tiếp nhận từ nhà cung cấp</small>
               </div>
-              <button className="ghost-btn" onClick={() => setIsModalOpen(false)} style={{ padding: '6px 10px' }}>✕</button>
+              <button className="text-btn" onClick={() => setIsModalOpen(false)}>✕</button>
             </div>
-            
+
             <form onSubmit={(e) => { e.preventDefault(); handleCreate(false); }}>
               <div className="modal-body">
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label>Nhà cung cấp *</label>
-                    <select 
+                    <label htmlFor="select-supplier">Nhà cung cấp *</label>
+                    <select
+                      id="select-supplier"
                       required
                       value={formData.supplier_id}
-                      onChange={(e) => setFormData({...formData, supplier_id: e.target.value})}
-                      style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
+                      onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
                     >
                       {suppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
                       {suppliers.length === 0 && <option value="">Đang tải NCC...</option>}
                     </select>
                   </div>
+
                   <div className="form-group">
-                    <label>Ngày lập chứng từ *</label>
-                    <input 
-                      type="date" 
-                      required 
+                    <label htmlFor="receipt-date">Ngày nhập kho *</label>
+                    <input
+                      id="receipt-date"
+                      type="date"
+                      required
                       value={formData.receipt_date}
-                      onChange={(e) => setFormData({...formData, receipt_date: e.target.value})}
-                      style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
+                      onChange={(e) => setFormData({ ...formData, receipt_date: e.target.value })}
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>Ghi chú nhập hàng (số hóa đơn, người giao, mã lô,...)</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: Nhập theo hóa đơn GTGT số HD-0982, xe giao lúc 10h..."
+                  <label htmlFor="receipt-notes">Ghi chú phiếu nhập</label>
+                  <input
+                    id="receipt-notes"
+                    type="text"
+                    placeholder="Thông tin đơn hàng, số hóa đơn đỏ, người bàn giao..."
                     value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    style={{ width: '100%', padding: '10px', background: '#1e293b', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '8px' }}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   />
                 </div>
 
-                <div style={{ marginTop: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '1.05rem', margin: 0, color: '#e2e8f0' }}>Danh sách sản phẩm nhập vào kho</h3>
-                    <button type="button" className="ghost-btn" onClick={addItem} style={{ fontSize: '0.85rem', color: '#38bdf8' }}>
-                      + Thêm dòng sản phẩm
+                {/* Danh sách mặt hàng */}
+                <div style={{ marginTop: '16px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ margin: 0, fontWeight: 600 }}>Chi tiết hàng hóa tiếp nhận ({items.length})</label>
+                    <button type="button" className="ghost-btn" onClick={addItem} style={{ padding: '3px 8px', fontSize: '11px', minHeight: 'auto' }}>
+                      + Thêm dòng
                     </button>
                   </div>
-                  
-                  {items.map((item, index) => {
-                    const selProd = products.find(p => p.id === parseInt(item.product_id));
-                    const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
 
-                    return (
-                      <div key={index} style={{
-                        display: 'grid',
-                        gridTemplateColumns: '3fr 1.2fr 1.8fr 1.8fr auto',
-                        gap: '12px',
-                        alignItems: 'center',
-                        marginBottom: '12px',
-                        background: 'rgba(30,41,59,0.5)',
-                        padding: '12px 14px',
-                        borderRadius: '10px',
-                        border: '1px solid rgba(148,163,184,0.15)'
-                      }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.78rem' }}>Sản phẩm *</label>
-                          <select 
-                            required
-                            value={item.product_id}
-                            onChange={(e) => updateItem(index, 'product_id', e.target.value)}
-                            style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '6px' }}
-                          >
-                            {products.map(p => (
-                              <option key={p.id} value={p.id}>
-                                {p.code} - {p.name} (Hiện có: {p.current_stock})
-                              </option>
-                            ))}
-                            {products.length === 0 && <option value="">Chưa có SP</option>}
-                          </select>
-                        </div>
-                        
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.78rem' }}>Số lượng *</label>
-                          <input 
-                            type="number" 
-                            min="1"
-                            required 
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                            style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '6px' }}
-                          />
-                        </div>
-                        
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.78rem' }}>Đơn giá (VNĐ)</label>
-                          <input 
-                            type="number" 
-                            min="0"
-                            step="1000"
-                            required 
-                            value={item.unit_price}
-                            onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                            style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '6px' }}
-                          />
-                        </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {items.map((item, index) => (
+                      <div 
+                        key={index} 
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '2fr 1fr 1.2fr auto',
+                          gap: '10px',
+                          alignItems: 'center',
+                          backgroundColor: '#FAF8EE',
+                          padding: '10px',
+                          border: '1px solid var(--line)',
+                          borderRadius: 'var(--radius-sm)'
+                        }}
+                      >
+                        <select
+                          value={item.product_id}
+                          onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                          required
+                          aria-label="Chọn sản phẩm"
+                        >
+                          {products.map(p => (
+                            <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                          ))}
+                        </select>
 
-                        <div style={{ textAlign: 'right', paddingTop: '16px' }}>
-                          <span style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block' }}>Thành tiền</span>
-                          <strong style={{ color: '#38bdf8', fontSize: '0.95rem' }}>{formatCurrency(lineTotal)}</strong>
-                        </div>
-                        
-                        <div style={{ paddingTop: '16px' }}>
-                          <button 
-                            type="button" 
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="SL"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                          required
+                          aria-label="Số lượng"
+                        />
+
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          placeholder="Đơn giá"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                          required
+                          aria-label="Đơn giá"
+                        />
+
+                        {items.length > 1 ? (
+                          <button
+                            type="button"
+                            className="text-btn danger-btn"
                             onClick={() => removeItem(index)}
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.15)',
-                              border: 'none',
-                              color: '#fca5a5',
-                              cursor: 'pointer',
-                              borderRadius: '6px',
-                              padding: '8px 10px'
-                            }}
-                            disabled={items.length === 1}
-                            title="Xóa dòng này"
+                            aria-label="Xóa dòng"
+                            style={{ padding: '4px' }}
                           >
                             ✕
                           </button>
-                        </div>
+                        ) : <div style={{ width: '20px' }}></div>}
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
 
-                {/* Tổng kết phiếu */}
+                {/* Tổng cộng */}
                 <div style={{
-                  marginTop: '16px',
-                  padding: '14px 18px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#FAF8EE',
+                  border: '1px solid var(--line)',
+                  borderRadius: 'var(--radius-sm)',
+                  marginTop: '16px'
                 }}>
-                  <div>
-                    <span style={{ color: '#94a3b8' }}>Tổng số mặt hàng: </span>
-                    <strong>{items.length} mặt hàng ({items.reduce((s, i) => s + (parseInt(i.quantity) || 0), 0)} đơn vị)</strong>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ color: '#94a3b8', marginRight: '10px' }}>Tổng tiền phiếu nhập:</span>
-                    <strong style={{ color: '#86efac', fontSize: '1.25rem' }}>{formatCurrency(calculateFormTotal())}</strong>
-                  </div>
+                  <span style={{ fontWeight: 500, fontSize: '13px' }}>Tổng giá trị lô hàng:</span>
+                  <strong className="tabular" style={{ fontSize: '16px', color: 'var(--ink)' }}>
+                    {formatCurrency(calculateFormTotal())}
+                  </strong>
                 </div>
               </div>
-              
-              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button type="button" className="ghost-btn" onClick={() => setIsModalOpen(false)}>Huỷ bỏ</button>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
-                    type="submit" 
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button type="button" className="ghost-btn" onClick={() => setIsModalOpen(false)}>
+                  Hủy bỏ
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="submit"
                     className="ghost-btn"
-                    disabled={isSubmitting || products.length === 0}
-                    style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', border: '1px solid rgba(234, 179, 8, 0.3)' }}
+                    disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Đang lưu...' : '💾 Lưu bản nháp (Chờ kiểm)'}
+                    Lưu bản nháp
                   </button>
-                  <button 
-                    type="button" 
-                    className="primary-btn" 
-                    disabled={isSubmitting || products.length === 0}
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    disabled={isSubmitting}
                     onClick={() => handleCreate(true)}
-                    style={{ background: 'linear-gradient(135deg, #10b981, #2563eb)' }}
                   >
-                    {isSubmitting ? 'Đang xử lý...' : '📥 Xác nhận nhập kho ngay (+Tồn kho)'}
+                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận nhập kho ngay'}
                   </button>
                 </div>
               </div>
@@ -658,104 +610,107 @@ function ImportsTab({ userRole, currentUser }) {
 
       {/* Modal Chi Tiết Phiếu Nhập */}
       {selectedReceipt && (
-        <div className="modal-overlay">
-          <div className="modal-content large" style={{ maxWidth: '750px' }}>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-content" style={{ maxWidth: '640px' }}>
             <div className="modal-header">
               <div>
-                <h2>Chi tiết phiếu nhập: {selectedReceipt.receipt_code}</h2>
-                <small style={{ color: '#94a3b8' }}>Ngày nhập: {formatDate(selectedReceipt.receipt_date)}</small>
+                <h2>Chi tiết phiếu nhập {selectedReceipt.receipt_code}</h2>
+                <small className="caption">
+                  Ngày tạo: {formatDate(selectedReceipt.receipt_date)} • NCC: {selectedReceipt.supplier?.name || '—'}
+                </small>
               </div>
-              <button className="ghost-btn" onClick={() => setSelectedReceipt(null)} style={{ padding: '6px 10px' }}>✕</button>
+              <button className="text-btn" onClick={() => setSelectedReceipt(null)}>✕</button>
             </div>
 
             <div className="modal-body">
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '16px',
-                padding: '14px',
-                background: 'rgba(30, 41, 59, 0.4)',
-                borderRadius: '10px',
-                marginBottom: '20px'
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '12px',
+                padding: '12px 14px',
+                backgroundColor: '#FAF8EE',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '16px'
               }}>
                 <div>
-                  <p style={{ margin: '0 0 6px', color: '#94a3b8', fontSize: '0.85rem' }}>Nhà cung cấp:</p>
-                  <strong style={{ fontSize: '1rem', color: '#f8fafc' }}>{selectedReceipt.supplier?.name || 'N/A'}</strong>
-                  {selectedReceipt.supplier?.code && <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.85rem' }}>Mã: {selectedReceipt.supplier.code}</p>}
+                  <span className="caption">Trạng thái:</span>
+                  <div style={{ marginTop: '2px' }}>
+                    <span className={`status ${selectedReceipt.status === 'CONFIRMED' ? 'confirmed' : 'draft'}`}>
+                      {selectedReceipt.status === 'CONFIRMED' ? 'Đã nhập kho' : 'Chờ xác nhận'}
+                    </span>
+                  </div>
                 </div>
                 <div>
-                  <p style={{ margin: '0 0 6px', color: '#94a3b8', fontSize: '0.85rem' }}>Trạng thái chứng từ:</p>
-                  <span className={`status ${selectedReceipt.status === 'CONFIRMED' ? 'ok' : selectedReceipt.status === 'CANCELLED' ? 'danger' : 'warning'}`}>
-                    {selectedReceipt.status === 'CONFIRMED' ? '✅ Đã nhập kho (Tồn kho đã tăng)' : selectedReceipt.status === 'CANCELLED' ? '❌ Đã huỷ' : '⏳ Chờ xác nhận (Bản nháp)'}
+                  <span className="caption">Tổng tiền:</span>
+                  <strong className="tabular" style={{ display: 'block', marginTop: '2px' }}>
+                    {formatCurrency(selectedReceipt.total_amount)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="caption">Người phụ trách:</span>
+                  <span style={{ display: 'block', marginTop: '2px', fontWeight: 500 }}>
+                    {selectedReceipt.created_by_user?.username || 'Admin'}
                   </span>
-                </div>
-                <div>
-                  <p style={{ margin: '0 0 6px', color: '#94a3b8', fontSize: '0.85rem' }}>Người lập phiếu:</p>
-                  <strong>{selectedReceipt.created_by_user?.full_name || selectedReceipt.created_by_user?.username || 'Quản trị viên / NV'}</strong>
-                </div>
-                <div>
-                  <p style={{ margin: '0 0 6px', color: '#94a3b8', fontSize: '0.85rem' }}>Ghi chú:</p>
-                  <p style={{ margin: 0, color: '#e2e8f0' }}>{selectedReceipt.notes || 'Không có ghi chú'}</p>
                 </div>
               </div>
 
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#e2e8f0' }}>Danh sách sản phẩm đã nhận</h3>
-              <div style={{ overflowX: 'auto', border: '1px solid rgba(148, 163, 184, 0.15)', borderRadius: '8px' }}>
+              {selectedReceipt.notes && (
+                <div style={{ marginBottom: '16px', fontSize: '13px' }}>
+                  <span className="caption">Ghi chú:</span>
+                  <p style={{ marginTop: '2px', color: 'var(--ink)' }}>{selectedReceipt.notes}</p>
+                </div>
+              )}
+
+              <div className="table-container">
                 <table>
                   <thead>
                     <tr>
                       <th>Sản phẩm</th>
-                      <th style={{ textAlign: 'center' }}>Số lượng</th>
-                      <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                      <th className="num">Số lượng</th>
+                      <th className="num">Đơn giá</th>
+                      <th className="num">Thành tiền</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(selectedReceipt.items || []).map((it, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          <strong>{it.product?.name || `Mã SP #${it.product_id}`}</strong>
-                          {it.product?.code && <small style={{ display: 'block', color: '#94a3b8' }}>{it.product.code}</small>}
+                    {(!selectedReceipt.items || selectedReceipt.items.length === 0) ? (
+                      <tr>
+                        <td colSpan="4" style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-subtle)' }}>
+                          Không có thông tin chi tiết mặt hàng.
                         </td>
-                        <td style={{ textAlign: 'center' }}><strong>{it.quantity}</strong></td>
-                        <td style={{ textAlign: 'right' }}>{formatCurrency(it.unit_price)}</td>
-                        <td style={{ textAlign: 'right' }}><strong>{formatCurrency(it.total_amount || (it.quantity * it.unit_price))}</strong></td>
                       </tr>
-                    ))}
+                    ) : (
+                      selectedReceipt.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <strong>{item.product?.name || `Mã #${item.product_id}`}</strong>
+                            {item.product?.code && (
+                              <small className="caption" style={{ display: 'block' }}>{item.product.code}</small>
+                            )}
+                          </td>
+                          <td className="num">{item.quantity}</td>
+                          <td className="num tabular">{formatCurrency(item.unit_price)}</td>
+                          <td className="num tabular">{formatCurrency(item.quantity * item.unit_price)}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
-                  <tfoot>
-                    <tr style={{ background: 'rgba(30, 41, 59, 0.6)' }}>
-                      <td colSpan="3" style={{ textAlign: 'right', fontWeight: 600 }}>TỔNG CỘNG:</td>
-                      <td style={{ textAlign: 'right', color: '#86efac', fontWeight: 700, fontSize: '1.1rem' }}>
-                        {formatCurrency(selectedReceipt.total_amount)}
-                      </td>
-                    </tr>
-                  </tfoot>
                 </table>
               </div>
             </div>
 
-            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <button type="button" className="ghost-btn" onClick={() => setSelectedReceipt(null)}>Đóng</button>
+            <div className="modal-footer">
+              <button className="ghost-btn" onClick={() => setSelectedReceipt(null)}>
+                Đóng
+              </button>
               {selectedReceipt.status === 'DRAFT' && (
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
-                    type="button" 
-                    className="ghost-btn" 
-                    style={{ color: '#fca5a5' }}
-                    onClick={() => handleCancelReceipt(selectedReceipt.id, selectedReceipt.receipt_code)}
-                  >
-                    Huỷ phiếu
-                  </button>
-                  <button 
-                    type="button" 
-                    className="primary-btn" 
-                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
-                    onClick={() => handleConfirmReceipt(selectedReceipt.id, selectedReceipt.receipt_code)}
-                  >
-                    ✅ Xác nhận nhập kho ngay (+Tồn kho)
-                  </button>
-                </div>
+                <button
+                  className="primary-btn"
+                  onClick={() => handleConfirmReceipt(selectedReceipt.id, selectedReceipt.receipt_code)}
+                  disabled={actionLoadingId === selectedReceipt.id}
+                >
+                  Xác nhận nhập kho
+                </button>
               )}
             </div>
           </div>

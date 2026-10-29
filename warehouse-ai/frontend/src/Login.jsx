@@ -12,7 +12,7 @@ function Login({ onLoginSuccess }) {
     if (e && e.preventDefault) e.preventDefault();
     
     if (!username || !password) {
-      setError('Vui lòng nhập đầy đủ tài khoản và mật khẩu');
+      setError('Vui lòng nhập đầy đủ tài khoản và mật khẩu.');
       return;
     }
 
@@ -21,10 +21,7 @@ function Login({ onLoginSuccess }) {
       setError(null);
       
       await api.login(username, password);
-      
-      // If we reach here, login was successful
       onLoginSuccess();
-      
     } catch (err) {
       console.error('Login failed:', err);
       setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
@@ -45,14 +42,14 @@ function Login({ onLoginSuccess }) {
         <div className="login-header">
           <div className="login-logo">W</div>
           <h1>Warehouse AI</h1>
-          <p>Đăng nhập để xem dữ liệu quản lý kho</p>
+          <p>Đăng nhập vào hệ thống quản lý kho thông minh</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          {error && <div className="error-message">{error}</div>}
+          {error && <div className="error-message" role="alert">{error}</div>}
           
           <div className="input-group">
-            <label htmlFor="username">Tài khoản</label>
+            <label htmlFor="username">Tên đăng nhập</label>
             <input
               id="username"
               type="text"
@@ -61,6 +58,7 @@ function Login({ onLoginSuccess }) {
               placeholder="Nhập tên đăng nhập"
               disabled={loading}
               autoComplete="username"
+              required
             />
           </div>
           
@@ -74,47 +72,48 @@ function Login({ onLoginSuccess }) {
               placeholder="Nhập mật khẩu"
               disabled={loading}
               autoComplete="current-password"
+              required
             />
           </div>
 
           <button 
             type="submit" 
-            className="login-btn"
+            className="primary-btn login-btn"
             disabled={loading}
           >
-            {loading ? 'Đang xác thực...' : 'Đăng nhập ngay'}
+            {loading ? 'Đang xác thực...' : 'Đăng nhập'}
           </button>
 
           <div className="demo-accounts-section">
-            <p className="demo-title">💡 Chọn nhanh tài khoản mẫu:</p>
+            <p className="demo-title">Tài khoản thử nghiệm sẵn có:</p>
             <div className="demo-buttons">
               <button
                 type="button"
                 className={`demo-btn ${username === 'admin' ? 'active' : ''}`}
                 onClick={() => handleSelectDemoUser('admin', 'password123')}
               >
-                👑 Admin
-              </button>
-              <button
-                type="button"
-                className={`demo-btn ${username === 'staff' ? 'active' : ''}`}
-                onClick={() => handleSelectDemoUser('staff', 'password123')}
-              >
-                👷 Nhân viên
+                Admin (Quản trị)
               </button>
               <button
                 type="button"
                 className={`demo-btn ${username === 'storekeeper' ? 'active' : ''}`}
                 onClick={() => handleSelectDemoUser('storekeeper', 'password123')}
               >
-                📦 Thủ kho
+                Thủ kho
               </button>
               <button
                 type="button"
                 className={`demo-btn ${username === 'accountant' ? 'active' : ''}`}
                 onClick={() => handleSelectDemoUser('accountant', 'password123')}
               >
-                📊 Kế toán
+                Kế toán
+              </button>
+              <button
+                type="button"
+                className={`demo-btn ${username === 'staff' ? 'active' : ''}`}
+                onClick={() => handleSelectDemoUser('staff', 'password123')}
+              >
+                Nhân viên kho
               </button>
             </div>
           </div>

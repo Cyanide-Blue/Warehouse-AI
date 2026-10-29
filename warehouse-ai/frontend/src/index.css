@@ -1,36 +1,562 @@
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+/* ==========================================================================
+   DESIGN TOKENS - WAREHOUSE AI (VÀNG NHẠT + ĐEN / 60-30-10)
+   ========================================================================== */
 :root {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  /* 60% Nền trung tính ấm */
+  --bg: #FFFDF5;
+  --surface: #FFFFFF;
+  --tint: #FFF6D6;
+  --line: #EAE5D0;
+  --line-strong: #D6D0B8;
+
+  /* 30% Đen cấu trúc */
+  --black: #111111;
+  --ink: #111111;
+  --ink-muted: #57534E;
+  --ink-subtle: #8C877D;
+
+  /* Sidebar đen */
+  --sidebar-bg: #111111;
+  --sidebar-surface: #1A1A1A;
+  --sidebar-line: #262626;
+  --sidebar-ink: #D4D4D8;
+  --sidebar-muted: #71717A;
+
+  /* 10% Vàng nhạt thương hiệu */
+  --accent: #F9D65C;
+  --accent-hover: #F2C94C;
+  --accent-active: #E9BC35;
+
+  /* Trạng thái chuẩn (Luôn kèm chấm màu + chữ) */
+  --status-ok-ink: #166534;
+  --status-ok-bg: #DCFCE7;
+  --status-ok-dot: #16A34A;
+
+  --status-warn-ink: #9A3412;
+  --status-warn-bg: #FFEDD5;
+  --status-warn-dot: #C2410C;
+
+  --status-danger-ink: #B91C1C;
+  --status-danger-bg: #FEE2E2;
+  --status-danger-dot: #DC2626;
+
+  --status-muted-ink: #44403C;
+  --status-muted-bg: #F5F5F4;
+  --status-muted-dot: #78716C;
+
+  /* Thang bo góc chuẩn (Tối đa 4px thành phần, 6px modal) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-modal: 6px;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Focus Ring (WCAG AA: Viền đen 2px + Vàng 2px) */
+  --focus-ring: 0 0 0 2px #111111, 0 0 0 4px #F9D65C;
+}
+
+/* ==========================================================================
+   RESET & BASE STYLES
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
   line-height: 1.5;
-  font-weight: 400;
-  color: #e2e8f0;
-  background: #020817;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
+/* Tabular nums for numbers */
+.num,
+.tabular,
+td.num,
+span.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-  min-height: 100vh;
+/* Typography scale */
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  letter-spacing: -0.02em;
 }
 
-body {
-  background: linear-gradient(180deg, #020817 0%, #0f172a 100%);
+h2 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+p {
+  color: var(--ink);
+}
+
+small, .caption {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 150ms ease;
+}
+
+a:hover {
+  color: var(--ink-muted);
+}
+
+/* ==========================================================================
+   BUTTONS (Nút hành động ưu tiên chữ)
+   ========================================================================== */
+button {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  min-height: 36px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Nút CTA Chính (1 nút duy nhất mỗi màn hình: Nền vàng #F9D65C, Chữ đen) */
+.primary-btn {
+  background-color: var(--accent);
+  color: #111111;
+  border: 1px solid #E9BC35;
+  font-weight: 600;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  border-color: #DFB22E;
+}
+
+.primary-btn:active:not(:disabled) {
+  background-color: var(--accent-active);
+}
+
+.primary-btn:disabled {
+  background-color: #E5E7EB;
+  color: #9CA3AF;
+  border-color: #E5E7EB;
+  cursor: not-allowed;
+}
+
+/* Nút Phụ (Viền 1px đen #111111, nền trong suốt, chữ đen) */
+.ghost-btn,
+.secondary-btn {
+  background-color: transparent;
+  color: var(--ink);
+  border: 1px solid var(--black);
+  font-weight: 500;
+}
+
+.ghost-btn:hover:not(:disabled),
+.secondary-btn:hover:not(:disabled) {
+  background-color: var(--tint);
+  border-color: var(--black);
+}
+
+.ghost-btn:active:not(:disabled),
+.secondary-btn:active:not(:disabled) {
+  background-color: #FBEFA8;
+}
+
+.ghost-btn:disabled,
+.secondary-btn:disabled {
+  border-color: var(--line);
+  color: var(--ink-subtle);
+  cursor: not-allowed;
+}
+
+/* Nút chỉ chữ (Text button) */
+.text-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  padding: 6px 8px;
+  min-height: auto;
+}
+
+.text-btn:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* Nút nguy hiểm / Xóa */
+.danger-btn {
+  background-color: transparent;
+  color: var(--status-danger-ink);
+  border: 1px solid var(--status-danger-ink);
+}
+
+.danger-btn:hover:not(:disabled) {
+  background-color: var(--status-danger-bg);
+}
+
+/* ==========================================================================
+   INPUTS & FORM ELEMENTS
+   ========================================================================== */
+input, select, textarea {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+  background-color: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  min-height: 36px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  width: 100%;
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--ink);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--ink-subtle);
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+/* ==========================================================================
+   BADGES & STATUS PILLS (Luôn kèm chấm màu + chữ)
+   ========================================================================== */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Còn hàng / Ổn định / Đã nhập */
+.status.ok,
+.status.confirmed,
+.status.healthy {
+  background-color: var(--status-ok-bg);
+  color: var(--status-ok-ink);
+  border-color: #BBF7D0;
+}
+.status.ok::before,
+.status.confirmed::before,
+.status.healthy::before {
+  background-color: var(--status-ok-dot);
+}
+
+/* Sắp hết / Thiếu hàng / Cần nhập */
+.status.warning,
+.status.low {
+  background-color: var(--status-warn-bg);
+  color: var(--status-warn-ink);
+  border-color: #FED7AA;
+}
+.status.warning::before,
+.status.low::before {
+  background-color: var(--status-warn-dot);
+}
+
+/* Hết hàng / Lỗi / Hủy */
+.status.danger,
+.status.cancelled,
+.status.error {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger-ink);
+  border-color: #FECACA;
+}
+.status.danger::before,
+.status.cancelled::before,
+.status.error::before {
+  background-color: var(--status-danger-dot);
+}
+
+/* Chờ xác nhận / Bản nháp */
+.status.draft,
+.status.pending,
+.status.muted {
+  background-color: var(--status-muted-bg);
+  color: var(--status-muted-ink);
+  border-color: #E7E5E4;
+}
+.status.draft::before,
+.status.pending::before,
+.status.muted::before {
+  background-color: var(--status-muted-dot);
+}
+
+/* ==========================================================================
+   TABLES (Hàng 48px, phẳng, phân tách bằng đường kẻ 1px, hover #FFF6D6)
+   ========================================================================== */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+thead {
+  background-color: #FAF8EE;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+th.num, td.num {
+  text-align: right;
+}
+
+tbody tr {
+  height: 48px;
+  border-bottom: 1px solid var(--line);
+  transition: background-color 150ms ease;
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background-color: var(--tint);
+}
+
+td {
+  padding: 8px 16px;
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.sku-code {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--ink);
+  background-color: #F5F3E9;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--line);
+  letter-spacing: 0.02em;
+}
+
+.empty-cell {
+  color: var(--ink-subtle);
+  font-style: normal;
+}
+
+/* ==========================================================================
+   PANEL / SURFACES (Không bóng đổ dày, viền mảnh 1px)
+   ========================================================================== */
+.panel {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ==========================================================================
+   MODAL DIALOG (Bo góc tối đa 6px, nền đen mờ)
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(17, 17, 17, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-content {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-modal);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  background-color: #FAF8EE;
+}
+
+/* ==========================================================================
+   ALERT BANNERS & NOTIFICATIONS
+   ========================================================================== */
+.alert-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid;
+}
+
+.alert-banner.success {
+  background-color: var(--status-ok-bg);
+  border-color: #86EFAC;
+  color: var(--status-ok-ink);
+}
+
+.alert-banner.error {
+  background-color: var(--status-danger-bg);
+  border-color: #FCA5A5;
+  color: var(--status-danger-ink);
+}
+
+.alert-banner.info {
+  background-color: var(--tint);
+  border-color: #F9D65C;
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   RESPONSIVE UTILITIES & SKELETON
+   ========================================================================== */
+.skeleton {
+  background: linear-gradient(90deg, #F3EFE0 25%, #FFFDF5 50%, #F3EFE0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s infinite;
+  border-radius: var(--radius-xs);
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

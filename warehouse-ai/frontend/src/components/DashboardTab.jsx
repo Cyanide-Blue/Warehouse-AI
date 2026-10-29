@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 
-function DashboardTab() {
+function DashboardTab({ onNavigateTab }) {
   const [stats, setStats] = useState([
-    { label: 'Tổng hàng tồn', value: '0', change: '+0%' },
-    { label: 'Phiếu nhập', value: '0', change: '+0%' },
-    { label: 'Phiếu xuất', value: '0', change: '+0%' },
-    { label: 'Sản phẩm dưới mức tối thiểu', value: '0', change: '+0' },
+    { label: 'Tổng hàng tồn', value: '0', change: '0 SKU' },
+    { label: 'Phiếu nhập', value: '0', change: '0 hoàn thành' },
+    { label: 'Phiếu xuất', value: '0', change: '0 hoàn thành' },
+    { label: 'Sản phẩm dưới mức tối thiểu', value: '0', change: 'Mức an toàn' },
   ]);
 
   const [inventoryData, setInventoryData] = useState([]);
-  const [alerts, setAlerts] = useState([
-    'Hệ thống đang kết nối với server...'
-  ]);
+  const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -54,16 +52,34 @@ function DashboardTab() {
       const lowStockCount = lowStock.length;
 
       setStats([
-        { label: 'Tổng hàng tồn', value: totalStock.toLocaleString('vi-VN'), change: `${products.length} SKU` },
-        { label: 'Phiếu nhập', value: importsCount.toString(), change: 'Đã tạo' },
-        { label: 'Phiếu xuất', value: exportsCount.toString(), change: 'Đã tạo' },
-        { label: 'Sản phẩm dưới mức tối thiểu', value: lowStockCount.toString(), change: lowStockCount > 0 ? `⚠️ Cần nhập ngay` : 'Đầy đủ' },
+        { 
+          label: 'Tổng hàng tồn', 
+          value: totalStock.toLocaleString('vi-VN'), 
+          change: `${products.length} danh mục SKU` 
+        },
+        { 
+          label: 'Phiếu nhập', 
+          value: importsCount.toString(), 
+          change: 'Giao dịch ghi nhận' 
+        },
+        { 
+          label: 'Phiếu xuất', 
+          value: exportsCount.toString(), 
+          change: 'Giao dịch ghi nhận' 
+        },
+        { 
+          label: 'Sản phẩm dưới mức tối thiểu', 
+          value: lowStockCount.toString(), 
+          change: lowStockCount > 0 ? 'Cần lập phiếu bổ sung' : 'Đảm bảo định mức an toàn' 
+        },
       ]);
 
       // Format inventory data
-      const inventoryItems = products.slice(0, 10).map((p) => ({
-        sku: p.code || 'N/A',
-        name: p.name || 'N/A',
+      const inventoryItems = products.slice(0, 8).map((p) => ({
+        id: p.id,
+        sku: p.code || '—',
+        name: p.name || '—',
+        category: p.category?.name || '—',
         stock: p.current_stock || 0,
         min: p.minimum_stock || 0,
         status:
@@ -75,95 +91,123 @@ function DashboardTab() {
       }));
 
       setInventoryData(inventoryItems);
+      setLowStockProducts(lowStock.slice(0, 5));
 
-      // Set alerts based on low stock
-      const alertMessages = lowStock.slice(0, 4).map((p) => 
-        `Cảnh báo: Sản phẩm "${p.name}" (Mã: ${p.code}) hiện còn ${p.current_stock}, dưới mức tối thiểu ${p.minimum_stock}.`
-      );
-      
-      if (alertMessages.length === 0) {
-        alertMessages.push('Tất cả sản phẩm đều đảm bảo mức tồn an toàn.');
-        alertMessages.push('Hệ thống hoạt động ổn định và sẵn sàng.');
-      }
-
-      setAlerts(alertMessages);
     } catch (err) {
       console.error('Error loading dashboard:', err);
-      setError(err.message || 'Lỗi kết nối đến server.');
-      setAlerts(['Không thể tải thông tin từ máy chủ.']);
+      setError(err.message || 'Lỗi kết nối máy chủ.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoToImport = () => {
+    if (onNavigateTab) {
+      onNavigateTab('imports');
+    }
+  };
+
+  const handleGoToProducts = () => {
+    if (onNavigateTab) {
+      onNavigateTab('products');
+    }
+  };
+
   return (
     <>
+      {/* Page Header: Eyebrow + Title (Left) -> 1 Primary CTA (Right) */}
       <header className="topbar">
-        <div>
+        <div className="topbar-left">
           <p className="eyebrow">Tổng quan hệ thống</p>
           <h1>Dashboard kho hàng</h1>
+          <p className="topbar-desc">
+            Theo dõi tồn kho, cảnh báo thiếu hụt và tổng hợp biến động xuất nhập theo thời gian thực.
+          </p>
         </div>
-        <button className="primary-btn">+ Tạo báo cáo</button>
+        <div className="topbar-actions">
+          <button className="primary-btn" onClick={handleGoToImport}>
+            Tạo phiếu nhập mới
+          </button>
+        </div>
       </header>
 
+      {/* Error state */}
       {error && (
-        <div style={{ 
-          padding: '16px', 
-          background: 'rgba(239, 68, 68, 0.1)', 
-          color: '#fca5a5',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          border: '1px solid rgba(239, 68, 68, 0.2)'
-        }}>
-          ⚠️ {error}
+        <div className="alert-banner error" role="alert">
+          <span>Không thể tải dữ liệu: {error}</span>
+          <button className="ghost-btn" style={{ marginLeft: 'auto', padding: '4px 10px', minHeight: 'auto' }} onClick={loadDashboard}>
+            Thử lại
+          </button>
         </div>
       )}
 
-      <section className="stats-grid">
+      {/* 4 KPI metrics: Dạng khối phẳng ngăn cách bằng đường kẻ dọc */}
+      <section className="kpi-row" aria-label="Chỉ số chính">
         {stats.map((item) => (
-          <article key={item.label} className="stat-card">
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <em>{item.change}</em>
+          <article key={item.label} className="kpi-item">
+            <span className="kpi-label">{item.label}</span>
+            <span className="kpi-value">{item.value}</span>
+            <span className="kpi-sub">{item.change}</span>
           </article>
         ))}
       </section>
 
-      <section className="content-grid">
-        <article className="panel inventory-panel">
+      {/* 12-Column Grid: 8 Columns Inventory Table + 4 Columns AI Alerts */}
+      <section className="dashboard-grid">
+        {/* Main 8-column Table */}
+        <article className="panel dashboard-main">
           <div className="panel-header">
-            <h2>Tồn kho theo sản phẩm</h2>
-            <button className="ghost-btn">Xem tất cả</button>
+            <div className="panel-title-group">
+              <h2>Tình trạng hàng tồn kho</h2>
+              <small className="caption">Danh sách sản phẩm có phát sinh biến động gần nhất</small>
+            </div>
+            <button className="ghost-btn" onClick={handleGoToProducts}>
+              Xem tất cả hàng hóa
+            </button>
           </div>
 
           {loading ? (
-            <div style={{ padding: '20px', textAlign: 'center' }}>Đang tải...</div>
+            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--ink-muted)' }}>
+              Đang đồng bộ dữ liệu kho hàng...
+            </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-container">
               <table>
                 <thead>
                   <tr>
-                    <th>SKU</th>
-                    <th>Sản phẩm</th>
-                    <th>Tồn</th>
-                    <th>Tối thiểu</th>
+                    <th>Mã SKU</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Danh mục</th>
+                    <th className="num">Tồn thực tế</th>
+                    <th className="num">Mức tối thiểu</th>
                     <th>Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
                   {inventoryData.length === 0 ? (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                        Không có dữ liệu
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--ink-subtle)' }}>
+                        Chưa có dữ liệu tồn kho.
                       </td>
                     </tr>
                   ) : (
                     inventoryData.map((item) => (
                       <tr key={item.sku}>
-                        <td>{item.sku}</td>
-                        <td>{item.name}</td>
-                        <td>{item.stock}</td>
-                        <td>{item.min}</td>
+                        <td>
+                          <span className="sku-code">{item.sku}</span>
+                        </td>
+                        <td>
+                          <strong style={{ fontWeight: 500 }}>{item.name}</strong>
+                        </td>
+                        <td>
+                          {item.category === '—' ? <span className="empty-cell">—</span> : item.category}
+                        </td>
+                        <td className="num">
+                          <strong style={{ fontWeight: 600 }}>{item.stock}</strong>
+                        </td>
+                        <td className="num">
+                          <span style={{ color: 'var(--ink-muted)' }}>{item.min}</span>
+                        </td>
                         <td>
                           <span
                             className={`status ${
@@ -186,17 +230,67 @@ function DashboardTab() {
           )}
         </article>
 
-        <article className="panel alerts-panel">
+        {/* Side 4-column AI Alerts */}
+        <article className="panel dashboard-side">
           <div className="panel-header">
-            <h2>Cảnh báo AI</h2>
-            <button className="ghost-btn">Phân tích</button>
+            <div className="panel-title-group">
+              <h2>Cảnh báo thiếu hụt</h2>
+              <small className="caption">Sản phẩm chạm ngưỡng an toàn</small>
+            </div>
+            <button className="text-btn" onClick={loadDashboard}>
+              Làm mới
+            </button>
           </div>
 
-          <ul className="alert-list">
-            {alerts.map((alert) => (
-              <li key={alert}>{alert}</li>
-            ))}
-          </ul>
+          {loading ? (
+            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--ink-muted)' }}>
+              Đang kiểm tra ngưỡng an toàn...
+            </div>
+          ) : lowStockProducts.length === 0 ? (
+            <div style={{ 
+              padding: '24px 16px', 
+              textAlign: 'center', 
+              backgroundColor: '#FAF8EE', 
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--radius-sm)'
+            }}>
+              <p style={{ fontWeight: 500, fontSize: '13px', marginBottom: '4px' }}>Tất cả định mức đều an toàn</p>
+              <small className="caption">Chưa ghi nhận sản phẩm nào dưới mức tồn kho tối thiểu.</small>
+            </div>
+          ) : (
+            <div className="alert-items-list">
+              {lowStockProducts.map((p) => {
+                const isOutOfStock = p.current_stock <= 0;
+                return (
+                  <div 
+                    key={p.id} 
+                    className={`alert-item-card ${isOutOfStock ? 'danger' : ''}`}
+                  >
+                    <div className="alert-item-header">
+                      <span className="alert-product-name">{p.name}</span>
+                      <span className={`status ${isOutOfStock ? 'danger' : 'warning'}`}>
+                        {isOutOfStock ? 'Hết hàng' : 'Thiếu hàng'}
+                      </span>
+                    </div>
+
+                    <div className="alert-stock-info">
+                      Tồn hiện tại: <strong>{p.current_stock}</strong> / Mức tối thiểu: <strong>{p.minimum_stock}</strong>
+                    </div>
+
+                    <div className="alert-item-actions">
+                      <button 
+                        className="ghost-btn" 
+                        style={{ padding: '4px 10px', fontSize: '12px', minHeight: '30px' }}
+                        onClick={handleGoToImport}
+                      >
+                        Nhập hàng
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </article>
       </section>
     </>
