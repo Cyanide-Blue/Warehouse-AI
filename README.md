@@ -136,3 +136,5 @@ Sau khi chạy lệnh `python seed.py`, hệ thống đã sẵn sàng với các
 
 ## 📄 Bản Quyền
 Dự án được xây dựng và phát triển phục vụ mục đích nghiên cứu, học tập và ứng dụng thực tiễn hệ thống WMS thông minh.
+
+<!-- Project Documentation & Status Updated -->
