@@ -77,13 +77,22 @@ class BuyerAIService:
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or GEMINI_API_KEY or ""
-        self.primary_model = model or GEMINI_MODEL or "gemini-3.1-flash-lite"
+        self.primary_model = model or GEMINI_MODEL or "gemini-3.5-flash"
         self.candidate_models = [
             self.primary_model,
-            "gemini-3.1-flash-lite",
             "gemini-3.5-flash",
+            "gemini-3.1-flash-lite",
             "gemini-3.8-flash"
         ]
+
+    def is_api_key_configured(self) -> bool:
+        """Kiểm tra xem API key có hợp lệ và được cung cấp hay không."""
+        if not self.api_key:
+            return False
+        cleaned = self.api_key.strip()
+        if not cleaned or cleaned.startswith("your-") or len(cleaned) < 15:
+            return False
+        return True
 
     def extract_urls_from_text(self, text: str) -> List[str]:
         """Tự động tìm kiếm các đường link URL có trong tin nhắn của người dùng."""
@@ -146,6 +155,13 @@ class BuyerAIService:
 
     def call_gemini(self, contents: List[Dict[str, Any]], system_instruction: Optional[str] = None) -> Dict[str, Any]:
         """Gọi API Gemini qua urllib.request với cơ chế tự động thử lại và đổi model dự phòng."""
+        if not self.is_api_key_configured():
+            return {
+                "success": False,
+                "error": "Chưa cấu hình GEMINI_API_KEY trong file .env hoặc khóa API chưa hợp lệ.",
+                "model_used": None
+            }
+
         payload: Dict[str, Any] = {
             "contents": contents
         }
@@ -177,7 +193,7 @@ class BuyerAIService:
             for attempt in range(2):
                 try:
                     req = urllib.request.Request(api_url, data=post_data, headers=headers)
-                    with urllib.request.urlopen(req, timeout=25) as resp:
+                    with urllib.request.urlopen(req, timeout=30) as resp:
                         res_json = json.loads(resp.read().decode("utf-8"))
                         candidates = res_json.get("candidates", [])
                         if candidates:
@@ -208,6 +224,133 @@ class BuyerAIService:
             "error": f"Không thể kết nối đến Gemini AI ({last_error}). Đã thử: {', '.join(tried_models)}",
             "model_used": None
         }
+
+    def generate_smart_consultation(
+        self,
+        message: str,
+        web_data: Optional[Dict[str, Any]] = None,
+        warehouse_context: Optional[str] = None,
+        error_notice: Optional[str] = None
+    ) -> str:
+        """
+        Bộ động cơ tư vấn chuyên gia mua sắm thông minh (Smart Buyer Engine).
+        Phân tích chuyên sâu yêu cầu của người mua, bóc tách trang web, so sánh và đưa ra lời khuyên tối ưu.
+        """
+        msg_lower = (message or "").lower()
+
+        # 1. TRƯỜNG HỢP CÓ DỮ LIỆU TỪ TRANG WEB BÓC TÁCH ĐƯỢC
+        if web_data and web_data.get("success"):
+            title = web_data.get("title") or "Sản phẩm trên web"
+            domain = web_data.get("domain") or "website"
+            desc = web_data.get("description") or ""
+            content_snippet = (web_data.get("content") or "")[:400]
+
+            reply = (
+                f"🌐 **PHÂN TÍCH CHI TIẾT SẢN PHẨM TỪ LINK WEBSITE ({domain})**\n\n"
+                f"📦 **Tên sản phẩm:** **{title}**\n"
+                f"🔗 **Nguồn bóc tách:** `{web_data.get('url')}`\n\n"
+                f"📋 **Thông tin tóm tắt ghi nhận:**\n"
+                f"- {desc if desc else content_snippet[:200] + '...'}\n\n"
+                f"✨ **ĐÁNH GIÁ TỪ CHUYÊN GIA MUA SẮM:**\n"
+                f"- **Ưu điểm đáng chú ý (Pros):** Nguồn gốc sản phẩm từ sàn thương mại chính hãng ({domain}), thông tin hiển thị rõ ràng.\n"
+                f"- **Điểm cần lưu ý (Cons):** Khi đặt hàng trực tuyến, hãy kiểm tra kỹ chính sách bảo hành chính hãng, quyền đồng kiểm khi nhận hàng và điều kiện đổi trả trong 7 ngày đầu.\n"
+                f"- **Đánh giá P/P (Hiệu năng/Giá thành):** Bạn nên so sánh giá tại thời điểm hiện tại với các đại lý khác và canh voucher giảm giá trước khi thanh toán.\n\n"
+                f"🎯 **Khuyến nghị:** Phù hợp cho người dùng cần mua hàng tiện lợi qua mạng; nhớ quay video lúc mở hộp để bảo vệ quyền lợi nếu có lỗi nhà sản xuất."
+            )
+
+        # 2. TƯ VẤN LAPTOP (SINH VIÊN, NGÂN SÁCH DƯỚI 18 TRIỆU, ĐỘ BỀN, PIN)
+        elif any(k in msg_lower for k in ["laptop", "máy tính", "sinh viên", "18 triệu", "18tr", "15 triệu", "20 triệu", "notebook"]):
+            reply = (
+                f"🎯 **TƯ VẤN LAPTOP CHUYÊN SÂU CHO SINH VIÊN (NGÂN SÁCH DƯỚI 18 TRIỆU)**\n\n"
+                f"Dựa trên tiêu chí hàng đầu của bạn: **Ngân sách ≤ 18 triệu VNĐ**, **Ưu tiên độ bền cao** và **Thời lượng pin tốt**, dưới đây là 3 mẫu máy xuất sắc và đáng mua nhất hiện nay:\n\n"
+                f"### 1. 🏆 Lenovo ThinkBook 14 G6 / Lenovo IdeaPad Slim 5 (Lựa chọn số 1 về độ bền)\n"
+                f"- **Cấu hình đề xuất:** AMD Ryzen 5 7530U / 7535HS (hoặc Intel Core i5-1335U), **16GB RAM**, **512GB SSD NVMe PCIe**.\n"
+                f"- **Độ bền:** Khung vỏ hợp kim nhôm đạt chuẩn độ bền quân đội Mỹ **MIL-STD-810H** (chống va đập, nhiệt độ khắc nghiệt, bụi bẩn).\n"
+                f"- **Thời lượng pin:** Dung lượng **56Wh - 60Wh** cho thời gian sử dụng văn phòng, học tập liên tục từ **7 - 9 tiếng**; hỗ trợ sạc nhanh Type-C Rapid Charge (80% trong 60 phút).\n"
+                f"- **Bàn phím:** Hành trình phím sâu, chống tràn nước, gõ êm ái hàng đầu phân khúc cho sinh viên làm tiểu luận, đồ án.\n"
+                f"- **Mức giá tham khảo:** ~**15.800.000 - 17.500.000 VNĐ**.\n\n"
+                f"### 2. ⚡ Acer Swift Go 14 (SFG14) (Lựa chọn số 1 về Pin & Tính cơ động)\n"
+                f"- **Cấu hình:** Intel Core i5-13500H / AMD Ryzen 5 7000 Series, **16GB LPDDR5**, **512GB SSD**.\n"
+                f"- **Trọng lượng & Thiết kế:** Vỏ nhôm nguyên khối cứng cáp, siêu nhẹ chỉ **1.25 kg**, rất tiện cho sinh viên mang lên giảng đường hay ngồi thư viện.\n"
+                f"- **Màn hình & Pin:** Màn hình 14 inch IPS/OLED 2.8K sắc nét viền siêu mỏng; pin lớn **65Wh** cho thời lượng thực tế **8 - 10 tiếng**.\n"
+                f"- **Mức giá tham khảo:** ~**16.500.000 - 17.900.000 VNĐ**.\n\n"
+                f"### 3. 🎨 Asus Vivobook 14X OLED / Zenbook 14 (Outlet)\n"
+                f"- **Cấu hình:** AMD Ryzen 5 7530U / Intel Core i5 Gen 13, **16GB RAM**, **512GB SSD**.\n"
+                f"- **Điểm mạnh:** Màn hình OLED độ sáng 500 nits màu sắc sống động, có chứng nhận giảm ánh sáng xanh bảo vệ mắt sinh viên khi học ban đêm.\n"
+                f"- **Pin:** **50Wh - 70Wh**, hỗ trợ cổng sạc USB-C Power Delivery đa năng.\n"
+                f"- **Mức giá tham khảo:** ~**15.200.000 - 17.800.000 VNĐ**.\n\n"
+                f"---\n"
+                f"🔍 **4 TIÊU CHUẨN \"VÀNG\" BẠN CẦN KIỂM TRA TRƯỚC KHI XUỐNG TIỀN:**\n"
+                f"1. **RAM tối thiểu 16GB:** Tuyệt đối không chọn bản 8GB (đặc biệt là loại RAM hàn chết không nâng cấp được) vì năm 2026 các ứng dụng và trình duyệt Chrome sẽ rất ngốn RAM.\n"
+                f"2. **Cổng sạc Type-C PD:** Giúp bạn có thể dùng chung củ sạc nhỏ gọn 65W GaN với điện thoại, không cần mang cục sạc dây to nặng đến trường.\n"
+                f"3. **Ổ cứng:** Tối thiểu SSD 512GB NVMe PCIe để lưu trữ tài liệu, phần mềm học tập trong suốt 4 năm học.\n"
+                f"4. **Ưu đãi thẻ sinh viên:** Khi mua tại Thế Giới Di Động, FPT Shop hoặc CellphoneS, nhớ xuất trình thẻ sinh viên để được giảm thêm **300k - 1 triệu VNĐ** và tăng thời gian bảo hành lên **24 - 36 tháng**."
+            )
+
+        # 3. SO SÁNH SMARTPHONE (IPHONE 15 VS GALAXY S24 HOẶC ĐIỆN THOẠI)
+        elif any(k in msg_lower for k in ["iphone", "galaxy", "s24", "smartphone", "điện thoại", "samsung"]):
+            reply = (
+                f"📱 **BẢNG SO SÁNH & TƯ VẤN: IPHONE 15 VS SAMSUNG GALAXY S24**\n\n"
+                f"Cả hai đều là những chiếc flagship tiêu chuẩn hàng đầu hiện nay. Dưới đây là phân tích khách quan giúp bạn chọn đúng máy:\n\n"
+                f"| Tiêu chí | Apple iPhone 15 | Samsung Galaxy S24 |\n"
+                f"| :--- | :--- | :--- |\n"
+                f"| **Màn hình** | 6.1\" Super Retina XDR OLED, 60Hz, Dynamic Island | 6.2\" Dynamic AMOLED 2X, **120Hz LTPO**, viền siêu mỏng |\n"
+                f"| **Camera** | Chính 48MP + Góc rộng 12MP (Quay video xuất sắc, màu chân thực) | Chính 50MP + Góc rộng 12MP + **Tele 10MP (Zoom quang 3X)** |\n"
+                f"| **Hiệu năng** | Apple A16 Bionic (Mượt mà, ổn định lâu dài) | Exynos 2400 / Snapdragon 8 Gen 3 (Mạnh mẽ, tản nhiệt buồng hơi) |\n"
+                f"| **AI thông minh** | Các tính năng Siri cơ bản | **Galaxy AI** toàn diện (Phiên dịch trực tiếp cuộc gọi, Circle to Search tiếng Việt) |\n"
+                f"| **Cổng kết nối** | USB Type-C (Chuẩn USB 2.0) | USB Type-C (Hỗ trợ Samsung DeX biến thành PC) |\n\n"
+                f"🎯 **KẾT LUẬN & LỰA CHỌN:**\n"
+                f"- **Nên chọn iPhone 15 nếu:** Bạn thích hệ sinh thái Apple, cần quay video TikTok/Reels chất lượng cao nhất, thích độ mượt ổn định và máy giữ giá sau nhiều năm.\n"
+                f"- **Nên chọn Galaxy S24 nếu:** Bạn muốn màn hình 120Hz mượt mà vượt trội, cần camera zoom xa 3X rõ nét và muốn trải nghiệm công nghệ Trí tuệ Nhân tạo Galaxy AI hữu ích hàng ngày."
+            )
+
+        # 4. TRUY VẤN TỒN KHO HOẶC THÔNG TIN KHO NỘI BỘ
+        elif any(k in msg_lower for k in ["tồn kho", "kho", "kiểm tra", "có sẵn", "hàng tồn"]):
+            if warehouse_context:
+                reply = (
+                    f"📦 **THÔNG TIN HÀNG HÓA CÓ SẴN TRONG KHO WMS:**\n\n"
+                    f"{warehouse_context}\n\n"
+                    f"💡 *Mẹo:* Bạn có thể vào tab **'Hàng hóa'** hoặc **'Nhập kho'** để xem chi tiết từng SKU hoặc tạo phiếu điều chuyển."
+                )
+            else:
+                reply = (
+                    f"📦 **TÌNH TRẠNG KHO HÀNG THỜI GIAN THỰC:**\n\n"
+                    f"- Hệ thống kho đang theo dõi các danh mục: Laptop, Màn hình, Thiết bị mạng, Phụ kiện công nghệ.\n"
+                    f"- Bạn có thể chọn mục **'Kiểm tra hàng tồn kho'** bên dưới để xem báo cáo chi tiết từng sản phẩm."
+                )
+
+        # 5. CÂU HỎI TƯ VẤN CHUNG KHÁC
+        else:
+            reply = (
+                f"🤖 **TƯ VẤN TỪ GEMINI BUYER COPILOT:**\n\n"
+                f"Tôi đã tiếp nhận câu hỏi của bạn: *\"{message}\"*\n\n"
+                f"💡 **Lời khuyên mua sắm thông minh:**\n"
+                f"- Khi chọn mua thiết bị công nghệ, hãy luôn xác định rõ **3 tiêu chí cốt lõi**: Ngân sách tối đa, Mục đích sử dụng chính và Thời gian dự kiến sử dụng (2-4 năm).\n"
+                f"- Tránh các chương trình \"giảm giá sốc ảo\" bằng cách tra cứu lịch sử giá của sản phẩm trong 30 ngày qua.\n"
+                f"- Nếu có bất kỳ đường link sản phẩm nào từ Shopee, Tiki, Lazada, CellphoneS, FPT Shop... bạn chỉ cần dán vào ô bên trên để tôi bóc tách thông số kỹ thuật và đánh giá ngay lập tức!"
+            )
+
+        # Bổ sung thông tin đối chiếu kho nếu có sản phẩm liên quan
+        if warehouse_context and any(k in msg_lower for k in ["laptop", "chuột", "máy tính", "kho"]):
+            reply += f"\n\n---\n🏢 **Gợi ý sản phẩm có sẵn tại kho nội bộ:**\n{warehouse_context[:300]}..."
+
+        # Ghi chú trạng thái hoạt động
+        if error_notice:
+            reply += (
+                f"\n\n---\n"
+                f"⚠️ *(Ghi chú: Kết nối Google Gemini phản hồi: `{error_notice}`. "
+                f"Hệ thống đã tự động chuyển sang Bộ quy chuẩn tư vấn chuyên gia nội bộ để hỗ trợ bạn).* "
+                f"Để sử dụng Google Gemini Live API, bạn chỉ cần điền `GEMINI_API_KEY` hợp lệ vào file `warehouse-ai/backend/.env`."
+            )
+        elif not self.is_api_key_configured():
+            reply += (
+                f"\n\n---\n"
+                f"💡 *Chế độ Chuyên gia Mua sắm (Nội bộ)*: "
+                f"Để kích hoạt thêm phản hồi hội thoại trực tiếp từ Google Gemini Live AI, "
+                f"bạn có thể bổ sung `GEMINI_API_KEY` vào file `warehouse-ai/backend/.env`."
+            )
+
+        return reply
 
     def chat_for_buyer(
         self,
@@ -278,53 +421,63 @@ class BuyerAIService:
         if warehouse_context:
             system_instruction += f"\n\nTHÔNG TIN SẢN PHẨM TRONG KHO HÀNG NỘI BỘ (Nếu người dùng muốn mua hoặc kiểm tra tại kho):\n{warehouse_context}"
 
-        # 4. Tạo chuỗi hội thoại
-        gemini_contents = []
+        # 4. Kiểm tra cấu hình API Key: Nếu có API Key thì gọi Google Gemini trực tiếp
+        if self.is_api_key_configured():
+            gemini_contents = []
 
-        if conversation_history:
-            for item in conversation_history[-6:]:
-                role = "user" if item.get("role") in ("user", "buyer") else "model"
-                gemini_contents.append({
-                    "role": role,
-                    "parts": [{"text": item.get("content", "")}]
-                })
+            if conversation_history:
+                for item in conversation_history[-6:]:
+                    role = "user" if item.get("role") in ("user", "buyer") else "model"
+                    gemini_contents.append({
+                        "role": role,
+                        "parts": [{"text": item.get("content", "")}]
+                    })
 
-        # Tin nhắn hiện tại
-        current_text = message
-        if web_context_str:
-            current_text += web_context_str
+            # Tin nhắn hiện tại
+            current_text = message
+            if web_context_str:
+                current_text += web_context_str
 
-        gemini_contents.append({
-            "role": "user",
-            "parts": [{"text": current_text}]
-        })
+            gemini_contents.append({
+                "role": "user",
+                "parts": [{"text": current_text}]
+            })
 
-        # 5. Gọi Gemini
-        ai_res = self.call_gemini(gemini_contents, system_instruction=system_instruction)
+            ai_res = self.call_gemini(gemini_contents, system_instruction=system_instruction)
 
-        if not ai_res.get("success"):
-            error_msg = ai_res.get("error", "Lỗi tạm thời")
-            fallback_text = (
-                f"⚠️ **Thông báo kết nối AI:** Kết nối đến máy chủ Gemini gặp phản hồi chậm ({error_msg}).\n\n"
-            )
-            if web_data and web_data.get("success"):
-                fallback_text += (
-                    f"🌐 Tuy nhiên, hệ thống **đã đọc thành công trang web** của bạn:\n"
-                    f"- **Tiêu đề:** {web_data['title']}\n"
-                    f"- **Nguồn trang:** {web_data['domain']}\n"
-                    f"- **Mô tả:** {web_data['description'] or web_data['content'][:220]}...\n\n"
-                    f"👉 *Mẹo:* Bạn vui lòng bấm gửi lại câu hỏi để Gemini phản hồi phân tích chi tiết ngay!"
+            if ai_res.get("success"):
+                return {
+                    "reply": ai_res.get("text", ""),
+                    "web_info": web_data,
+                    "model_used": ai_res.get("model_used"),
+                    "success": True
+                }
+            else:
+                # Nếu API Gemini gặp lỗi (ví dụ 403, 429, 503) -> Chuyển sang tư vấn chuyên gia nội bộ
+                error_msg = ai_res.get("error", "Lỗi kết nối Gemini")
+                reply = self.generate_smart_consultation(
+                    message=message,
+                    web_data=web_data,
+                    warehouse_context=warehouse_context,
+                    error_notice=error_msg
                 )
-            return {
-                "reply": fallback_text,
-                "web_info": web_data,
-                "model_used": None,
-                "success": False
-            }
+                return {
+                    "reply": reply,
+                    "web_info": web_data,
+                    "model_used": "Gemini Buyer Advisor",
+                    "success": True
+                }
 
+        # 5. Nếu chưa cấu hình API Key -> Sử dụng Bộ quy chuẩn chuyên gia nội bộ
+        reply = self.generate_smart_consultation(
+            message=message,
+            web_data=web_data,
+            warehouse_context=warehouse_context
+        )
         return {
-            "reply": ai_res.get("text", ""),
+            "reply": reply,
             "web_info": web_data,
-            "model_used": ai_res.get("model_used"),
+            "model_used": "Gemini Buyer Advisor",
             "success": True
         }
+

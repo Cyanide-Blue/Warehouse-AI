@@ -3,14 +3,17 @@ echo ========================================================
 echo     WAREHOUSE AI - KHOI DONG HE THONG
 echo ========================================================
 
-set "PYTHON_EXE=C:\Users\ADMIN\AppData\Local\Programs\Python\Python38\python.exe"
-set "NODE_DIR=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VisualStudio\NodeJs"
-set "PATH=%NODE_DIR%;%PATH%"
+set "ROOT=%~dp0"
+if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
-set "ROOT=C:\Users\ADMIN\OneDrive\Desktop\Ung_dung_ai\Warehouse-AI"
+set "PYTHON_EXE=python"
+where %PYTHON_EXE% >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    set "PYTHON_EXE=py"
+)
 
 echo [1/2] Dang khoi dong Backend API (Port 8000)...
-start "Warehouse-AI-Backend" cmd /k "cd /d "%ROOT%\warehouse-ai\backend" && "%PYTHON_EXE%" -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+start "Warehouse-AI-Backend" cmd /k "cd /d "%ROOT%\warehouse-ai\backend" && %PYTHON_EXE% -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
 
 ping 127.0.0.1 -n 3 >nul
 
@@ -25,3 +28,4 @@ echo  - Frontend Web: http://localhost:5173
 echo  - Backend API:  http://localhost:8000
 echo ========================================================
 start http://localhost:5173
+
