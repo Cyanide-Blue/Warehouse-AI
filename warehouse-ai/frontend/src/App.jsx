@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
 import './App.css';
 import api from './services/api';
 import Login from './Login';
@@ -10,6 +10,36 @@ import ImportsTab from './components/ImportsTab';
 import ExportsTab from './components/ExportsTab';
 import ReportsTab from './components/ReportsTab';
 import AITab from './components/AITab';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('UI Error Boundary caught error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '60px 20px', textAlign: 'center', background: '#FFFDF5', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>Đã xảy ra sự cố khi tải dữ liệu mục này</h2>
+          <p style={{ color: '#78716C', fontSize: '13px', marginBottom: '20px' }}>{this.state.error?.message || 'Lỗi hiển thị giao diện.'}</p>
+          <button 
+            className="primary-btn" 
+            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+          >
+            Tải lại trang
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('access_token'));
@@ -275,7 +305,9 @@ function App() {
         </div>
 
         <main className="main-panel">
-          {renderContent()}
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

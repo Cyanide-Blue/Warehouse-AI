@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+
 
 function ProductsTab({ userRole, currentUser, onNavigateTab }) {
   const [products, setProducts] = useState([]);
@@ -234,13 +235,13 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
   };
 
-  const categoryMap = React.useMemo(() => {
+  const categoryMap = useMemo(() => {
     const map = {};
     (categories || []).forEach(c => { map[c.id] = c.name; });
     return map;
   }, [categories]);
 
-  const unitMap = React.useMemo(() => {
+  const unitMap = useMemo(() => {
     const map = {};
     (units || []).forEach(u => { map[u.id] = u.name; });
     return map;
