@@ -234,13 +234,28 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
   };
 
+  const categoryMap = React.useMemo(() => {
+    const map = {};
+    (categories || []).forEach(c => { map[c.id] = c.name; });
+    return map;
+  }, [categories]);
+
+  const unitMap = React.useMemo(() => {
+    const map = {};
+    (units || []).forEach(u => { map[u.id] = u.name; });
+    return map;
+  }, [units]);
+
   const filteredProducts = products.filter((p) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase().trim();
+    const catName = (p.category?.name || categoryMap[p.category_id] || '').toLowerCase();
+    const unitName = (p.unit?.name || unitMap[p.unit_id] || '').toLowerCase();
     return (
       (p.code && p.code.toLowerCase().includes(term)) ||
       (p.name && p.name.toLowerCase().includes(term)) ||
-      (p.category?.name && p.category.name.toLowerCase().includes(term))
+      catName.includes(term) ||
+      unitName.includes(term)
     );
   });
 
@@ -352,8 +367,12 @@ function ProductsTab({ userRole, currentUser, onNavigateTab }) {
                   filteredProducts.map((p) => {
                     const isOutOfStock = p.current_stock <= 0;
                     const isLowStock = !isOutOfStock && p.current_stock < p.minimum_stock;
-                    const categoryDisplay = p.category?.name && p.category.name !== 'N/A' ? p.category.name : '—';
-                    const unitDisplay = p.unit?.name && p.unit.name !== 'N/A' ? p.unit.name : '—';
+                    const categoryDisplay = (p.category?.name && p.category.name !== 'N/A') 
+                      ? p.category.name 
+                      : (categoryMap[p.category_id] || '—');
+                    const unitDisplay = (p.unit?.name && p.unit.name !== 'N/A') 
+                      ? p.unit.name 
+                      : (unitMap[p.unit_id] || '—');
 
                     return (
                       <tr key={p.id}>

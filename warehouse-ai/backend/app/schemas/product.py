@@ -1,9 +1,29 @@
 """
 Product schemas for CRUD operations
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
+
+
+class SimpleCategory(BaseModel):
+    """Simple category schema for nested product response"""
+    id: int
+    name: str
+    code: Optional[str] = None
+    description: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SimpleUnit(BaseModel):
+    """Simple unit schema for nested product response"""
+    id: int
+    name: str
+    abbreviation: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ProductBase(BaseModel):
     """Base product schema"""
@@ -15,9 +35,11 @@ class ProductBase(BaseModel):
     description: Optional[str] = None
     reorder_quantity: Optional[int] = None
 
+
 class ProductCreate(ProductBase):
     """Product creation schema"""
     pass
+
 
 class ProductUpdate(BaseModel):
     """Product update schema"""
@@ -28,13 +50,20 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     reorder_quantity: Optional[int] = None
 
+
 class ProductResponse(ProductBase):
-    """Product response schema"""
+    """Product response schema with full category and unit details"""
     id: int
     current_stock: int
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    category: Optional[SimpleCategory] = None
+    unit: Optional[SimpleUnit] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_orm(cls, obj):
+        return cls.model_validate(obj)
+
